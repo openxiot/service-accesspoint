@@ -30,12 +30,11 @@ public class XcpDeviceServer {
     @OnOpen
     public void onOpen(Session session, @PathParam("did") String did) {
         logger.infov("XCP device connected: did={0}, sessionId={1}", did, session.getId());
+        session.setMaxIdleTimeout(60_000);
     }
 
     @OnMessage
     public void onMessage(String text, Session session, @PathParam("did") String did) {
-        logger.infov("Message from did={0}: {1}", did, text);
-
         try {
             JsonObject json = new JsonObject(text);
             Stanza stanza = stanzaCodec.decode(json);
@@ -86,23 +85,20 @@ public class XcpDeviceServer {
     }
 
     private void sendText(Session session, JsonObject json) {
-        String text = json.encode();
-        session.getAsyncRemote().sendText(text);
+        session.getAsyncRemote().sendText(json.encode());
     }
 
     private void sendError(Session session, String id, int status, String description) {
         sendText(session, stanzaCodec.encode(new IQError(id, status, description)));
     }
 
-    private String methodOf(IQ iq) {
+    private static String methodOf(IQ iq) {
         if (iq instanceof IQQuery) {
             return ((IQQuery) iq).method();
         }
-
         if (iq instanceof IQResult) {
             return ((IQResult) iq).method();
         }
-
         return "";
     }
 }
