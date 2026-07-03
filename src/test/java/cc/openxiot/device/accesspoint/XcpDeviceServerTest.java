@@ -1,5 +1,8 @@
 package cc.openxiot.device.accesspoint;
 
+import cn.geekcity.xiot.xcp.stanza.codec.vertx.impl.StanzaCodec;
+import cn.geekcity.xiot.xcp.stanza.iq.IQResult;
+import cn.geekcity.xiot.xcp.stanza.iq.basic.Ping;
 import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.Test;
 
@@ -14,47 +17,41 @@ import static org.junit.jupiter.api.Assertions.*;
 @QuarkusTest
 class XcpDeviceServerTest {
 
-    @Test
-    void testEcho() throws Exception {
-        CountDownLatch latch = new CountDownLatch(2);
-        AtomicReference<String> echo = new AtomicReference<>();
-        AtomicReference<String> welcome = new AtomicReference<>();
+    private final StanzaCodec stanzaCodec = StanzaCodec.getInstance();
 
-        EchoClient client = new EchoClient();
+    @Test
+    void testPingPong() throws Exception {
+        CountDownLatch latch = new CountDownLatch(1);
+        AtomicReference<String> response = new AtomicReference<>();
+
+        TestClient client = new TestClient();
         client.latch = latch;
-        client.welcome = welcome;
-        client.echo = echo;
+        client.response = response;
 
         WebSocketContainer container = ContainerProvider.getWebSocketContainer();
         Session session = container.connectToServer(client,
-                URI.create("ws://localhost:8081/ws/echo"));
+                URI.create("ws://localhost:8081/test-device-001"));
 
-        assertTrue(latch.await(10, TimeUnit.SECONDS), "timed out waiting for messages");
-        assertNotNull(welcome.get());
-        assertTrue(welcome.get().startsWith("Connected to"));
-        assertEquals("echo: hello", echo.get());
+        String pingJson = stanzaCodec.encode(new Ping.Query("ping-1")).encode();
+        session.getAsyncRemote().sendText(pingJson);
+
+        assertTrue(latch.await(10, TimeUnit.SECONDS), "timed out waiting for pong");
+        assertNotNull(response.get());
+
+        IQResult result = (IQResult) stanzaCodec.decode(new io.vertx.core.json.JsonObject(response.get()));
+        assertEquals("ping-1", result.id());
 
         session.close();
     }
 
     @ClientEndpoint
-    static class EchoClient {
+    static class TestClient {
         CountDownLatch latch;
-        AtomicReference<String> welcome;
-        AtomicReference<String> echo;
-
-        @OnOpen
-        void onOpen(Session session) {
-            session.getAsyncRemote().sendText("hello");
-        }
+        AtomicReference<String> response;
 
         @OnMessage
         void onMessage(String msg) {
-            if (welcome.get() == null) {
-                welcome.set(msg);
-            } else {
-                echo.set(msg);
-            }
+            response.set(msg);
             latch.countDown();
         }
     }
