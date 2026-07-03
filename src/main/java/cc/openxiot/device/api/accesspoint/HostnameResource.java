@@ -23,8 +23,11 @@ public class HostnameResource {
 
     @GET
     public Response getHostname() {
-        String hostname = System.getenv("HOSTNAME");
-        logger.infov("HOSTNAME: {0}", hostname);
-        return OxResponse.ok(hostname != null ? hostname : "unknown");
+        // 优先使用 ACA 提供的副本名称来标识实例
+        String replicaName = System.getenv("CONTAINER_APP_REPLICA_NAME");
+        // 如果变量不存在，可以fallback到HOSTNAME或unknown
+        String instanceId = replicaName != null ? replicaName : System.getenv("HOSTNAME");
+        logger.infov("Instance ID: {0}", instanceId);
+        return OxResponse.ok(instanceId != null ? instanceId : "unknown");
     }
 }
