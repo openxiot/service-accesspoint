@@ -9,7 +9,7 @@ import jakarta.inject.Inject;
 
 @ServerEndpoint("/ws/echo")
 @ApplicationScoped
-public class XcpServer {
+public class XcpDeviceServer {
 
     @Inject
     Logger logger;

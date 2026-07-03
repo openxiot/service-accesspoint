@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.junit.jupiter.api.Assertions.*;
 
 @QuarkusTest
-class XcpServerTest {
+class XcpDeviceServerTest {
 
     @Test
     void testEcho() throws Exception {

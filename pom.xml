@@ -52,15 +52,25 @@
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-websockets</artifactId>
         </dependency>
+
         <dependency>
             <groupId>cc.openxiot</groupId>
             <artifactId>xiot-spec</artifactId>
             <version>${openxiot.core}</version>
         </dependency>
-
         <dependency>
             <groupId>cc.openxiot</groupId>
             <artifactId>xiot-spec-codec-vertx</artifactId>
+            <version>${openxiot.core}</version>
+        </dependency>
+        <dependency>
+            <groupId>cc.openxiot</groupId>
+            <artifactId>xcp-stanza</artifactId>
+            <version>${openxiot.core}</version>
+        </dependency>
+        <dependency>
+            <groupId>cc.openxiot</groupId>
+            <artifactId>xcp-stanza-codec-vertx</artifactId>
             <version>${openxiot.core}</version>
         </dependency>
 
