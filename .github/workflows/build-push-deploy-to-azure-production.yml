@@ -7,9 +7,9 @@ on:
 
 env:
   REGISTRY: ghcr.io/openxiot
-  IMAGE_NAME: service-product
+  IMAGE_NAME: service-device-accesspoint
   RESOURCE_GROUP: production
-  CONTAINER_APP_NAME: service-product
+  CONTAINER_APP_NAME: service-device-accesspoint
 
 jobs:
   build-and-push:
