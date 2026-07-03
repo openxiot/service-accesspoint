@@ -12,7 +12,9 @@ import org.jboss.logging.Logger;
 
 import jakarta.inject.Inject;
 
-@Path("/v1/hostname")
+import java.net.NetworkInterface;
+
+@Path("/v1/instance")
 @Produces(MediaType.APPLICATION_JSON)
 @Tag(name = "Hostname", description = "Hostname API")
 @RequestScoped
@@ -22,12 +24,62 @@ public class HostnameResource {
     Logger logger;
 
     @GET
-    public Response getHostname() {
-        // 优先使用 ACA 提供的副本名称来标识实例
-        String replicaName = System.getenv("CONTAINER_APP_REPLICA_NAME");
+    @Path("/id")
+    public Response getInstanceId() {
+        // 使用指定的环境变量名称来读取实例ID
+        //  Azure Container App:
+        //      INSTANCE_ID_NAME = CONTAINER_APP_REPLICA_NAME
+        //  Alibaba Cloud Serverless
+        //      INSTANCE_ID_NAME = EDAS_APP_ID
+        //  Amazon ECS
+        //      INSTANCE_ID_NAME = ECS_CONTAINER_METADATA_URI_V4
+
+        String instanceIdName = System.getenv("INSTANCE_ID_NAME");
+        logger.warnv("INSTANCE_ID_NAME: {0}", instanceIdName);
+
+        String replicaName = instanceIdName != null ? System.getenv(instanceIdName) : null;
+        logger.warnv("Replica name: {0}", replicaName);
+
         // 如果变量不存在，可以fallback到HOSTNAME或unknown
         String instanceId = replicaName != null ? replicaName : System.getenv("HOSTNAME");
-        logger.infov("Instance ID: {0}", instanceId);
+        logger.warnv("Instance ID: {0}", instanceId);
+
         return OxResponse.ok(instanceId != null ? instanceId : "unknown");
+    }
+
+    @GET
+    @Path("/ip")
+    public Response getIp() {
+        String ip = resolveContainerIp();
+        logger.infov("Container IP: {0}", ip);
+        return OxResponse.ok(ip);
+    }
+
+    private String resolveContainerIp() {
+        try {
+            // Kubernetes 等平台会通过环境变量暴露 POD IP
+            String podIp = System.getenv("POD_IP");
+            if (podIp != null && !podIp.isBlank()) {
+                return podIp;
+            }
+
+            // 遍历网络接口，找到第一个非回环的 IPv4 地址
+            var interfaces = java.net.NetworkInterface.networkInterfaces()
+                    .filter(java.util.Objects::nonNull)
+                    .flatMap(NetworkInterface::inetAddresses)
+                    .toList();
+
+            for (var addr : interfaces) {
+                if (addr instanceof java.net.Inet4Address && !addr.isLoopbackAddress()) {
+                    return addr.getHostAddress();
+                }
+            }
+
+            // fallback
+            return java.net.InetAddress.getLocalHost().getHostAddress();
+        } catch (Exception e) {
+            logger.errorv("Failed to resolve container IP: {0}", e.getMessage());
+            return "unknown";
+        }
     }
 }

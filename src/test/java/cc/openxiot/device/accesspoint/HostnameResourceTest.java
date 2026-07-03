@@ -10,9 +10,19 @@ import static org.hamcrest.CoreMatchers.notNullValue;
 @QuarkusTest
 class HostnameResourceTest {
     @Test
-    void testHostnameEndpoint() {
+    void testInstanceIdEndpoint() {
         given()
-          .when().get("/v1/hostname")
+          .when().get("/v1/instance/id")
+          .then()
+             .statusCode(200)
+             .body("success", is(true))
+             .body("data", is(notNullValue()));
+    }
+
+    @Test
+    void testIpEndpoint() {
+        given()
+          .when().get("/v1/instance/ip")
           .then()
              .statusCode(200)
              .body("success", is(true))
