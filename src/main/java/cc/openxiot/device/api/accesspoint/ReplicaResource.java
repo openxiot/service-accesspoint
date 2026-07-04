@@ -30,17 +30,11 @@ public class ReplicaResource {
     @Path("/id")
     public Response getReplicaId() {
         // 使用指定的环境变量名称来读取实例ID
-        //  Azure Container App:
-        //      INSTANCE_ID_NAME = CONTAINER_APP_REPLICA_NAME
-        //  Alibaba Cloud Serverless
-        //      INSTANCE_ID_NAME = EDAS_APP_ID
-        //  Amazon ECS
-        //      INSTANCE_ID_NAME = ECS_CONTAINER_METADATA_URI_V4
+        //  Azure Container App: CONTAINER_APP_REPLICA_NAME
+        //  Alibaba Cloud Serverless: EDAS_APP_ID
+        //  Amazon ECS: ECS_CONTAINER_METADATA_URI_V4
 
-        String instanceIdName = System.getenv("INSTANCE_ID_NAME");
-        logger.warnv("INSTANCE_ID_NAME: {0}", instanceIdName);
-
-        String replicaName = instanceIdName != null ? System.getenv(instanceIdName) : null;
+        String replicaName = System.getenv("CONTAINER_APP_REPLICA_NAME");
         logger.warnv("Replica name: {0}", replicaName);
 
         // 如果变量不存在，可以fallback到HOSTNAME或unknown
