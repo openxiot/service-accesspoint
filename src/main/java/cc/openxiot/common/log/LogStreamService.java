@@ -64,6 +64,11 @@ public class LogStreamService {
                     loggerName = loggerName.substring(loggerName.lastIndexOf('.') + 1);
                 }
                 String message = record.getMessage();
+                if (record.getParameters() != null) {
+                    for (int i = 0; i < record.getParameters().length; i++) {
+                        message = message.replace("{" + i + "}", String.valueOf(record.getParameters()[i]));
+                    }
+                }
                 if (record.getThrown() != null) {
                     var sw = new java.io.StringWriter();
                     record.getThrown().printStackTrace(new java.io.PrintWriter(sw));
