@@ -1,6 +1,7 @@
 package cc.openxiot.device.api.accesspoint;
 
 import cc.openxiot.common.response.OxResponse;
+import cc.openxiot.device.api.accesspoint.replica.ReplicaService;
 import jakarta.enterprise.context.RequestScoped;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
@@ -12,11 +13,6 @@ import org.jboss.logging.Logger;
 
 import jakarta.inject.Inject;
 
-import java.net.Inet4Address;
-import java.net.InetAddress;
-import java.net.NetworkInterface;
-import java.util.Objects;
-
 @Path("/v1/replica")
 @Produces(MediaType.APPLICATION_JSON)
 @Tag(name = "Replica", description = "Replica API")
@@ -26,9 +22,12 @@ public class ReplicaResource {
     @Inject
     Logger logger;
 
+    @Inject
+    ReplicaService replica;
+
     @GET
     @Path("/id")
-    public Response getReplicaId() {
+    public Response getId() {
         // 使用指定的环境变量名称来读取实例ID
         //  Azure Container App: CONTAINER_APP_REPLICA_NAME
         //  Alibaba Cloud Serverless: EDAS_APP_ID
@@ -47,36 +46,8 @@ public class ReplicaResource {
     @GET
     @Path("/ip")
     public Response getIp() {
-        String ip = resolveContainerIp();
+        String ip = replica.getIp();
         logger.infov("Container IP: {0}", ip);
         return OxResponse.ok(ip);
-    }
-
-    private String resolveContainerIp() {
-        try {
-            // Kubernetes 等平台会通过环境变量暴露 POD IP
-            String podIp = System.getenv("POD_IP");
-            if (podIp != null && !podIp.isBlank()) {
-                return podIp;
-            }
-
-            // 遍历网络接口，找到第一个非回环的 IPv4 地址
-            var interfaces = NetworkInterface.networkInterfaces()
-                    .filter(Objects::nonNull)
-                    .flatMap(NetworkInterface::inetAddresses)
-                    .toList();
-
-            for (var addr : interfaces) {
-                if (addr instanceof Inet4Address && !addr.isLoopbackAddress()) {
-                    return addr.getHostAddress();
-                }
-            }
-
-            // fallback
-            return InetAddress.getLocalHost().getHostAddress();
-        } catch (Exception e) {
-            logger.errorv("Failed to resolve container IP: {0}", e.getMessage());
-            return "unknown";
-        }
     }
 }

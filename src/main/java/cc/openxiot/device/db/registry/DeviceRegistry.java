@@ -1,4 +1,4 @@
-package cc.openxiot.registry.db.registry;
+package cc.openxiot.device.db.registry;
 
 import io.quarkus.mongodb.panache.PanacheMongoEntityBase;
 import io.quarkus.mongodb.panache.common.MongoEntity;

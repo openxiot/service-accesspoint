@@ -5,6 +5,7 @@ import cc.openxiot.device.api.accesspoint.limiter.RateLimiter;
 import cc.openxiot.device.api.accesspoint.endpoint.XcpDeviceEndpoint;
 import cc.openxiot.device.api.accesspoint.endpoint.XcpDeviceEndpointManager;
 import cc.openxiot.device.api.accesspoint.endpoint.factory.XcpDeviceFactory;
+import cc.openxiot.device.api.accesspoint.replica.ReplicaService;
 import cn.geekcity.xiot.spec.image.DeviceImage;
 import cn.geekcity.xiot.spec.summary.Summary;
 import cn.geekcity.xiot.xcp.stanza.codec.vertx.impl.StanzaCodec;
@@ -22,6 +23,9 @@ public class XcpDeviceServer {
 
     @Inject
     Logger logger;
+
+    @Inject
+    ReplicaService replica;
 
     @Inject
     XcpDeviceFactory factory;
@@ -62,7 +66,7 @@ public class XcpDeviceServer {
 
         DeviceImage image = factory.newInstance(did, new Summary(type, true, "wss", null, did));
         if (image != null) {
-            manager.add(new XcpDeviceEndpoint(vertx, session, image, codec));
+            manager.add(new XcpDeviceEndpoint(vertx, replica.getIp(), session, image, codec));
         } else {
             logger.warnv("Reject device, type not found from ProductCenter: did={0}, type={1}", did, type);
             session.setMaxIdleTimeout(1);

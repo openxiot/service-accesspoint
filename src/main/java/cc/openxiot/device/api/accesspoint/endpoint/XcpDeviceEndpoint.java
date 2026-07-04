@@ -33,6 +33,7 @@ public class XcpDeviceEndpoint {
     private static final int DEFAULT_QUERY_TIMEOUT_MS = 3 * 1000;
 
     private final Vertx vertx;
+    private final String replicaIp;
     private final Session session;
     private final StanzaCodec codec;
     private final DeviceImage root;
@@ -41,13 +42,18 @@ public class XcpDeviceEndpoint {
     private final Map<String, XcpResultHandler> resultHandlers = new HashMap<>();
     private final Map<String, Handler<Message<? extends Notice>>> messageHandlers = new HashMap<>();
 
-    public XcpDeviceEndpoint(Vertx vertx, Session session, DeviceImage image, StanzaCodec codec) {
+    public XcpDeviceEndpoint(Vertx vertx, String ip, Session session, DeviceImage image, StanzaCodec codec) {
         this.vertx = vertx;
+        this.replicaIp = ip;
         this.session = session;
         this.root = image;
         this.codec = codec;
 
         this.session.setMaxIdleTimeout(60_000);
+    }
+
+    public String replicaIp() {
+        return this.replicaIp;
     }
 
     public String id() {
