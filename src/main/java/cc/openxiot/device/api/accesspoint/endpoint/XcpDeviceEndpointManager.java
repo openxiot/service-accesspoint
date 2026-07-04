@@ -1,5 +1,6 @@
 package cc.openxiot.device.api.accesspoint.endpoint;
 
+import cn.geekcity.xiot.spec.device.Device;
 import cn.geekcity.xiot.spec.error.IotError;
 import cn.geekcity.xiot.spec.image.DeviceImage;
 import cn.geekcity.xiot.spec.notice.Notice;
@@ -70,6 +71,20 @@ public class XcpDeviceEndpointManager {
 
     public Collection<XcpDeviceEndpoint> getEndpoints() {
         return endpoints.values();
+    }
+
+    public List<Device> getDevices() {
+        List<Device> list = new ArrayList<>();
+
+        for (XcpDeviceEndpoint endpoint : endpoints.values()) {
+            list.add(new Device(endpoint.root().did(), endpoint.root().summary()));
+
+            for (DeviceImage child : endpoint.root().children().values()) {
+                list.add(new Device(child.did(), child.summary()));
+            }
+        }
+
+        return list;
     }
 
     public List<Shadow> getShadow(String did) {

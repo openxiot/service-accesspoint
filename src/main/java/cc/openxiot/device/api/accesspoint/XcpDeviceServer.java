@@ -13,9 +13,8 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.websocket.*;
 import jakarta.websocket.server.PathParam;
 import jakarta.websocket.server.ServerEndpoint;
-import org.jboss.logging.Logger;
-
 import jakarta.inject.Inject;
+import org.jboss.logging.Logger;
 
 @ServerEndpoint(value = "/{did}/{type}", configurator = XcpCertConfigurator.class)
 @ApplicationScoped

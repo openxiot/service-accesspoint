@@ -4,6 +4,7 @@ import cc.openxiot.common.filter.PrivateNetwork;
 import cc.openxiot.common.response.OxResponse;
 import cc.openxiot.device.api.accesspoint.endpoint.XcpDeviceEndpoint;
 import cc.openxiot.device.api.accesspoint.endpoint.XcpDeviceEndpointManager;
+import cn.geekcity.xiot.spec.codec.vertx.device.DeviceCodec;
 import cn.geekcity.xiot.spec.codec.vertx.operation.ActionOperationCodec;
 import cn.geekcity.xiot.spec.codec.vertx.operation.PropertyOperationCodec;
 import cn.geekcity.xiot.spec.operation.ActionOperation;
@@ -53,6 +54,12 @@ public class XcpDeviceServerResource {
             return OxResponse.ok(Map.of("id", id, "status", "offline"));
         }
         return OxResponse.ok(Map.of("id", s.id(), "status", "online"));
+    }
+
+    @GET
+    @Path("/devices")
+    public Response getDevices() {
+        return OxResponse.ok(DeviceCodec.encode(manager.getDevices()));
     }
 
     @GET
