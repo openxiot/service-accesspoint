@@ -1,8 +1,8 @@
 package cc.openxiot.common.log;
 
 import io.vertx.ext.web.Router;
+import io.quarkus.runtime.StartupEvent;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.context.Initialized;
 import jakarta.enterprise.event.Observes;
 import jakarta.inject.Inject;
 import java.time.Instant;
@@ -45,7 +45,7 @@ public class LogStreamService {
         });
     }
 
-    void registerLogHandler(@Observes @Initialized(ApplicationScoped.class) Object ignore) {
+    void registerLogHandler(@Observes StartupEvent event) {
         Logger root = Logger.getLogger("");
         root.addHandler(new Handler() {
             @Override
