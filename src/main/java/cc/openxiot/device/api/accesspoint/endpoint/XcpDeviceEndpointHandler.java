@@ -1,4 +1,4 @@
-package cc.openxiot.device.api.accesspoint.session;
+package cc.openxiot.device.api.accesspoint.endpoint;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;

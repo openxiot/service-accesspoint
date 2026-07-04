@@ -1,4 +1,4 @@
-package cc.openxiot.device.api.accesspoint.session.factory;
+package cc.openxiot.device.api.accesspoint.endpoint.factory;
 
 import cn.geekcity.xiot.spec.codec.vertx.image.DeviceImageCodec;
 import cn.geekcity.xiot.spec.image.DeviceImage;

@@ -1,4 +1,4 @@
-package cc.openxiot.device.api.accesspoint.session;
+package cc.openxiot.device.api.accesspoint.endpoint;
 
 import cn.geekcity.xiot.spec.error.IotError;
 import cn.geekcity.xiot.spec.status.Status;

@@ -2,9 +2,9 @@ package cc.openxiot.device.api.accesspoint;
 
 import cc.openxiot.device.api.accesspoint.configurator.XcpCertConfigurator;
 import cc.openxiot.device.api.accesspoint.limiter.RateLimiter;
-import cc.openxiot.device.api.accesspoint.session.XcpDeviceEndpoint;
-import cc.openxiot.device.api.accesspoint.session.XcpDeviceEndpointManager;
-import cc.openxiot.device.api.accesspoint.session.factory.XcpDeviceFactory;
+import cc.openxiot.device.api.accesspoint.endpoint.XcpDeviceEndpoint;
+import cc.openxiot.device.api.accesspoint.endpoint.XcpDeviceEndpointManager;
+import cc.openxiot.device.api.accesspoint.endpoint.factory.XcpDeviceFactory;
 import cn.geekcity.xiot.spec.image.DeviceImage;
 import cn.geekcity.xiot.spec.summary.Summary;
 import cn.geekcity.xiot.xcp.stanza.codec.vertx.impl.StanzaCodec;

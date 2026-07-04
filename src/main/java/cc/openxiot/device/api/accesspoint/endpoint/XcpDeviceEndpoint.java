@@ -1,4 +1,4 @@
-package cc.openxiot.device.api.accesspoint.session;
+package cc.openxiot.device.api.accesspoint.endpoint;
 
 import cn.geekcity.xiot.spec.error.IotError;
 import cn.geekcity.xiot.spec.image.DeviceImage;
@@ -91,7 +91,6 @@ public class XcpDeviceEndpoint {
         JsonObject json = codec.encode(stanza);
         session.getAsyncRemote().sendText(json.encode());
     }
-
 
     /**
      * get properties

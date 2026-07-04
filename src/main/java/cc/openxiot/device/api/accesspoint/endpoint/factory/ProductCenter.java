@@ -1,4 +1,4 @@
-package cc.openxiot.device.api.accesspoint.session.factory;
+package cc.openxiot.device.api.accesspoint.endpoint.factory;
 
 import jakarta.json.JsonObject;
 import jakarta.ws.rs.*;

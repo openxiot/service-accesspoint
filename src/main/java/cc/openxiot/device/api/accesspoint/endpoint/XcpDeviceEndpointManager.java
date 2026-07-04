@@ -1,4 +1,4 @@
-package cc.openxiot.device.api.accesspoint.session;
+package cc.openxiot.device.api.accesspoint.endpoint;
 
 import cn.geekcity.xiot.spec.error.IotError;
 import cn.geekcity.xiot.spec.image.DeviceImage;
@@ -126,23 +126,23 @@ public class XcpDeviceEndpointManager {
         return promise.future();
     }
 
-    public Future<IQ> setProperties(SetProperties.Query query) {
-        Promise<IQ> promise = Promise.promise();
+    public Future<List<PropertyOperation>> setProperties(String traceId, List<PropertyOperation> operations) {
+        Promise<List<PropertyOperation>> promise = Promise.promise();
 
         Map<String, List<PropertyOperation>> x = new HashMap<>();
 
-        for (PropertyOperation property : query.properties().stream().distinct().toList()) {
+        for (PropertyOperation property : operations) {
             List<PropertyOperation> properties = x.computeIfAbsent(property.did(), k -> new ArrayList<>());
             properties.add(property);
         }
 
         List<Future<List<PropertyOperation>>> futures = new ArrayList<>();
-        x.forEach((did, properties) -> futures.add(setProperties(did, properties, query.id() + "#" + did)));
+        x.forEach((did, properties) -> futures.add(setProperties(did, properties, traceId)));
 
         FutureMerger.mergeList(futures)
                 .onComplete(ar -> {
                     if (ar.succeeded()) {
-                        promise.complete(query.result(ar.result()));
+                        promise.complete(ar.result());
                     } else {
                         promise.fail(ar.cause());
                     }
@@ -151,22 +151,22 @@ public class XcpDeviceEndpointManager {
         return promise.future();
     }
 
-    public Future<IQ> invokeActions(InvokeActions.Query query) {
-        Promise<IQ> promise = Promise.promise();
+    public Future<List<ActionOperation>> invokeActions(String traceId, List<ActionOperation> operations) {
+        Promise<List<ActionOperation>> promise = Promise.promise();
 
         Map<String, List<ActionOperation>> x = new HashMap<>();
-        for (ActionOperation action : query.actions().stream().distinct().toList()) {
+        for (ActionOperation action : operations) {
             List<ActionOperation> actions = x.computeIfAbsent(action.did(), k -> new ArrayList<>());
             actions.add(action);
         }
 
         List<Future<List<ActionOperation>>> futures = new ArrayList<>();
-        x.forEach((did, actions) -> futures.add(invokeActions(did, actions, query.id() + "#" + did)));
+        x.forEach((did, actions) -> futures.add(invokeActions(did, actions, traceId)));
 
         FutureMerger.mergeList(futures)
                 .onComplete(ar -> {
                     if (ar.succeeded()) {
-                        promise.complete(query.result(ar.result()));
+                        promise.complete(ar.result());
                     } else {
                         promise.fail(ar.cause());
                     }

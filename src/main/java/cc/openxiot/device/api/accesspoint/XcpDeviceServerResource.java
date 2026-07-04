@@ -2,10 +2,13 @@ package cc.openxiot.device.api.accesspoint;
 
 import cc.openxiot.common.filter.PrivateNetwork;
 import cc.openxiot.common.response.OxResponse;
-import cc.openxiot.device.api.accesspoint.session.XcpDeviceEndpoint;
-import cc.openxiot.device.api.accesspoint.session.XcpDeviceEndpointManager;
+import cc.openxiot.device.api.accesspoint.endpoint.XcpDeviceEndpoint;
+import cc.openxiot.device.api.accesspoint.endpoint.XcpDeviceEndpointManager;
+import cn.geekcity.xiot.spec.codec.vertx.operation.ActionOperationCodec;
 import cn.geekcity.xiot.spec.codec.vertx.operation.PropertyOperationCodec;
+import cn.geekcity.xiot.spec.operation.ActionOperation;
 import cn.geekcity.xiot.spec.operation.PropertyOperation;
+import io.vertx.core.json.JsonArray;
 import jakarta.enterprise.context.RequestScoped;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Context;
@@ -21,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletionStage;
+import java.util.stream.Collectors;
 
 @PrivateNetwork
 @Path("/v1/private")
@@ -57,17 +61,52 @@ public class XcpDeviceServerResource {
             @QueryParam("pid") List<String> pid,
             @Context HttpHeaders headers
     ) {
-        // traceId: 优先取链路追踪的 X-Request-Id，没有则生成 UUID
-        String traceId = headers.getHeaderString("X-Request-Id");
-        if (traceId == null || traceId.isBlank()) {
-            traceId = UUID.randomUUID().toString();
-        }
-
+        String traceId = resolveTraceId(headers);
         List<PropertyOperation> properties = pid.stream().map(PropertyOperation::new).toList();
-
         return manager.getProperties(traceId, properties)
                 .map(list -> OxResponse.ok(PropertyOperationCodec.Get.RESULT.encode(list)))
                 .otherwise(e -> OxResponse.error(e.getMessage()))
                 .toCompletionStage();
+    }
+
+    @POST
+    @Path("/properties")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public CompletionStage<Response> setProperties(
+            String body,
+            @Context HttpHeaders headers
+    ) {
+        String traceId = resolveTraceId(headers);
+        JsonArray array = new JsonArray(body);
+        List<PropertyOperation> properties = array.stream()
+                .map(PropertyOperationCodec.Set.QUERY::decode)
+                .collect(Collectors.toList());
+        return manager.setProperties(traceId, properties)
+                .map(list -> OxResponse.ok(PropertyOperationCodec.Set.RESULT.encode(list)))
+                .otherwise(e -> OxResponse.error(e.getMessage()))
+                .toCompletionStage();
+    }
+
+    @POST
+    @Path("/actions")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public CompletionStage<Response> invokeActions(
+            String body,
+            @Context HttpHeaders headers
+    ) {
+        String traceId = resolveTraceId(headers);
+        JsonArray array = new JsonArray(body);
+        List<ActionOperation> actions = array.stream()
+                .map(ActionOperationCodec.QUERY::decode)
+                .collect(Collectors.toList());
+        return manager.invokeActions(traceId, actions)
+                .map(list -> OxResponse.ok(ActionOperationCodec.RESULT.encode(list)))
+                .otherwise(e -> OxResponse.error(e.getMessage()))
+                .toCompletionStage();
+    }
+
+    private static String resolveTraceId(HttpHeaders headers) {
+        String traceId = headers.getHeaderString("X-Request-Id");
+        return (traceId != null && !traceId.isBlank()) ? traceId : UUID.randomUUID().toString();
     }
 }
