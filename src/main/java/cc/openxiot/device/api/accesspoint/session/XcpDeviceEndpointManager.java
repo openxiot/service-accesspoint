@@ -27,7 +27,7 @@ public class XcpDeviceEndpointManager {
     private final ConcurrentHashMap<String, XcpDeviceEndpoint> endpoints = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, String> devices = new ConcurrentHashMap<>();
 
-    public void register(XcpDeviceEndpoint endpoint) {
+    public void add(XcpDeviceEndpoint endpoint) {
         endpoints.put(endpoint.id(), endpoint);
 
         // save: <did, endpointId> => devices
@@ -47,14 +47,17 @@ public class XcpDeviceEndpointManager {
         }
     }
 
-    public void unregister(String id) {
-        XcpDeviceEndpoint endpoint = endpoints.get(id);
-
-        handler.onInactive(endpoint);
+    public void remove(String id) {
+        XcpDeviceEndpoint endpoint = endpoints.remove(id);
+        if (endpoint != null) {
+            devices.remove(endpoint.root().did());
+            handler.onInactive(endpoint);
+        }
     }
 
-    public XcpDeviceEndpoint getEndpoint(String id) {
-        return endpoints.get(id);
+    public XcpDeviceEndpoint getEndpoint(String did) {
+        String endpointId = devices.get(did);
+        return endpointId != null ? endpoints.get(endpointId) : null;
     }
 
     public Collection<XcpDeviceEndpoint> getEndpoints() {

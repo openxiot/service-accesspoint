@@ -8,6 +8,7 @@ import cc.openxiot.device.api.accesspoint.session.factory.XcpDeviceFactory;
 import cn.geekcity.xiot.spec.image.DeviceImage;
 import cn.geekcity.xiot.spec.summary.Summary;
 import cn.geekcity.xiot.xcp.stanza.codec.vertx.impl.StanzaCodec;
+import io.vertx.core.Vertx;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.websocket.*;
 import jakarta.websocket.server.PathParam;
@@ -15,8 +16,6 @@ import jakarta.websocket.server.ServerEndpoint;
 import org.jboss.logging.Logger;
 
 import jakarta.inject.Inject;
-
-import java.io.IOException;
 
 @ServerEndpoint(value = "/{did}/{type}", configurator = XcpCertConfigurator.class)
 @ApplicationScoped
@@ -33,6 +32,9 @@ public class XcpDeviceServer {
 
     @Inject
     RateLimiter rateLimiter;
+
+    @Inject
+    Vertx vertx;
 
     private final StanzaCodec codec = StanzaCodec.getInstance();
 
@@ -52,11 +54,7 @@ public class XcpDeviceServer {
             String cn = extractCn(cert);
             if (cn != null && !cn.equals(did)) {
                 logger.warnv("Reject device: CN mismatch, did={0}, cn={1}", did, cn);
-                try {
-                    session.close(new CloseReason(CloseReason.CloseCodes.VIOLATED_POLICY, "device id mismatch"));
-                } catch (Exception e) {
-                    logger.warnv("Error closing session", e);
-                }
+                session.setMaxIdleTimeout(1);
                 return;
             }
         }
@@ -65,14 +63,10 @@ public class XcpDeviceServer {
 
         DeviceImage image = factory.newInstance(did, new Summary(type, true, "wss", null, did));
         if (image != null) {
-            manager.register(new XcpDeviceEndpoint(session, image, codec));
+            manager.add(new XcpDeviceEndpoint(vertx, session, image, codec));
         } else {
             logger.warnv("Reject device, type not found from ProductCenter: did={0}, type={1}", did, type);
-            try {
-                session.close();
-            } catch (IOException e) {
-                logger.warnv("Error closing session", e);
-            }
+            session.setMaxIdleTimeout(1);
         }
     }
 
@@ -96,8 +90,8 @@ public class XcpDeviceServer {
     @OnMessage
     public void onMessage(@PathParam("did") String did, Session session, String text) {
         // rate limit: per-device message throttle
-        if (!rateLimiter.tryAcquire(session.getId())) {
-            logger.warnv("Rate limit exceeded for did = {0}, closing session = (1)", did, session.getId());
+        if (!rateLimiter.tryAcquire(did)) {
+            logger.warnv("Rate limit exceeded for did={0}, closing session", did);
 
             try {
                 session.close(new CloseReason(CloseReason.CloseCodes.VIOLATED_POLICY, "rate limit exceeded"));
@@ -119,7 +113,8 @@ public class XcpDeviceServer {
     @OnClose
     public void onClose(Session session, @PathParam("did") String did) {
         logger.infov("XCP device disconnected: did = {0}, sessionId = {1}", did, session.getId());
-        manager.unregister(session.getId());
+        manager.remove(session.getId());
+        rateLimiter.remove(did);
     }
 
     @OnError
