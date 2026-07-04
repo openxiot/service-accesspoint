@@ -12,19 +12,19 @@ import cn.geekcity.xiot.xcp.stanza.iq.IQ;
 import cn.geekcity.xiot.xcp.stanza.iq.IQError;
 import cn.geekcity.xiot.xcp.stanza.iq.IQQuery;
 import cn.geekcity.xiot.xcp.stanza.iq.IQResult;
+import cn.geekcity.xiot.xcp.stanza.iq.device.control.GetProperties;
+import cn.geekcity.xiot.xcp.stanza.iq.device.control.InvokeActions;
+import cn.geekcity.xiot.xcp.stanza.iq.device.control.SetProperties;
 import cn.geekcity.xiot.xcp.stanza.message.Message;
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Future;
-import io.vertx.core.Handler;
-import io.vertx.core.Vertx;
+import io.vertx.core.*;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
 import jakarta.websocket.Session;
 import org.jboss.logging.Logger;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class XcpDeviceEndpoint {
 
@@ -92,30 +92,185 @@ public class XcpDeviceEndpoint {
         session.getAsyncRemote().sendText(json.encode());
     }
 
-    public List<PropertyOperation> getProperties(String stanzaId, List<PropertyOperation> properties) {
-        return null;
+
+    /**
+     * get properties
+     * @param stanzaId stanzaId
+     * @param properties the properties to be got
+     * @return  a result for execute
+     */
+    Future<List<PropertyOperation>> getProperties(String stanzaId, List<PropertyOperation> properties) {
+        Promise<List<PropertyOperation>> promise = Promise.promise();
+
+        root.tryRead(properties);
+
+        List<PropertyOperation> normalProperties = new ArrayList<>();
+
+        for (PropertyOperation property : properties) {
+            if (property.isNotError()) {
+                normalProperties.add(property);
+            }
+        }
+
+        if (normalProperties.isEmpty()) {
+            promise.complete(properties);
+        } else {
+            GetProperties.Query query = new GetProperties.Query(stanzaId, normalProperties);
+            this.send(query, ar -> {
+                if (ar.succeeded()) {
+                    Map<String, PropertyOperation> results = ((GetProperties.Result) ar.result()).properties().stream()
+                            .collect(Collectors.toMap((x -> x.pid().toString()), Function.identity()));
+
+                    for (PropertyOperation p : normalProperties) {
+                        PropertyOperation result = results.get(p.pid().toString());
+                        if (result != null) {
+                            p.status(result.status());
+                            p.description(result.description());
+                            p.value(result.value());
+                        } else {
+                            p.status(Status.INTERNAL_ERROR);
+                            p.description("response not contains property" );
+                        }
+                    }
+
+                    promise.complete(properties);
+                } else {
+                    promise.fail(ar.cause());
+                }
+            });
+        }
+
+        return promise.future();
     }
 
-    public List<PropertyOperation> setProperties(String stanzaId, List<PropertyOperation> properties) {
-        return null;
+    /**
+     * get properties
+     * @param stanzaId stanzaId
+     * @param properties the properties to be set
+     * @return  a result for execute
+     */
+    Future<List<PropertyOperation>> setProperties(String stanzaId, List<PropertyOperation> properties) {
+        Promise<List<PropertyOperation>> promise = Promise.promise();
+
+        root.tryWrite(properties, false);
+
+        List<PropertyOperation> normalProperties = new ArrayList<>();
+
+        for (PropertyOperation property : properties) {
+            if (property.isNotError()) {
+                normalProperties.add(property);
+            }
+        }
+
+        if (normalProperties.isEmpty()) {
+            promise.complete(properties);
+        } else {
+            SetProperties.Query query = new SetProperties.Query(stanzaId, normalProperties);
+            this.send(query, ar -> {
+                if (ar.succeeded()) {
+                    Map<String, PropertyOperation> results = ((SetProperties.Result) ar.result()).properties().stream()
+                            .collect(Collectors.toMap((x -> x.pid().toString()), Function.identity()));
+
+                    for (PropertyOperation p : normalProperties) {
+                        PropertyOperation result = results.get(p.pid().toString());
+                        if (result != null) {
+                            p.status(result.status());
+                            p.description(result.description());
+                        } else {
+                            p.status(Status.INTERNAL_ERROR);
+                            p.description("response not contains property" );
+                        }
+                    }
+
+                    promise.complete(properties);
+                } else {
+                    promise.fail(ar.cause());
+                }
+            });
+        }
+
+        return promise.future();
     }
 
-    public List<ActionOperation> invokeActions(String stanzaId, List<ActionOperation> actions) {
-        return null;
+    /**
+     * invoke actions
+     * @param stanzaId stanzaId
+     * @param actions the actions to be invocation
+     * @return  a result for execute
+     */
+    Future<List<ActionOperation>> invokeActions(String stanzaId, List<ActionOperation> actions) {
+        Promise<List<ActionOperation>> promise = Promise.promise();
+
+        root.tryInvoke(actions);
+
+        List<ActionOperation> normalActions = new ArrayList<>();
+
+        for (ActionOperation action : actions) {
+            if (action.isNotError()) {
+                normalActions.add(action);
+            }
+        }
+
+        if (normalActions.isEmpty()) {
+            promise.complete(actions);
+        } else {
+            InvokeActions.Query query = new InvokeActions.Query(stanzaId, normalActions);
+            this.send(query, ar -> {
+                if (ar.succeeded()) {
+                    Map<String, ActionOperation> results = ((InvokeActions.Result) ar.result()).actions().stream()
+                            .collect(Collectors.toMap((x -> x.aid().toString()), Function.identity()));
+
+                    for (ActionOperation p : normalActions) {
+                        ActionOperation result = results.get(p.aid().toString());
+                        if (result != null) {
+                            p.status(result.status());
+                            p.description(result.description());
+                            p.out(result.out().values());
+                        } else {
+                            p.status(Status.INTERNAL_ERROR);
+                            p.description("response not contains action" );
+                        }
+                    }
+
+                    promise.complete(actions);
+                } else {
+                    promise.fail(ar.cause());
+                }
+            });
+        }
+
+        return promise.future();
     }
 
-    public PropertyOperation getProperty(String stanzaId, PropertyOperation property) {
-        return null;
+    /**
+     * get property
+     * @param stanzaId stanzaId
+     * @param property the property to be got
+     * @return  a result for execute
+     */
+    Future<PropertyOperation> getProperty(String stanzaId, PropertyOperation property) {
+        return getProperties(stanzaId, Collections.singletonList(property)).map(List::getFirst);
     }
 
-    public PropertyOperation setProperty(String stanzaId, PropertyOperation property) {
-        return null;
+    /**
+     * get property
+     * @param stanzaId stanzaId
+     * @param property the property to be set
+     * @return  a result for execute
+     */
+    Future<PropertyOperation> setProperty(String stanzaId, PropertyOperation property) {
+        return setProperties(stanzaId, Collections.singletonList(property)).map(List::getFirst);
     }
 
-    public ActionOperation invokeAction(String stanzaId, ActionOperation action) {
-        return null;
+    /**
+     * invoke action
+     * @param stanzaId stanzaId
+     * @param action the action to be invocation
+     * @return  a result for execute
+     */
+    Future<ActionOperation> invokeAction(String stanzaId, ActionOperation action) {
+        return invokeActions(stanzaId, Collections.singletonList(action)).map(List::getFirst);
     }
-
 
     public void onReceive(String text) {
         try {

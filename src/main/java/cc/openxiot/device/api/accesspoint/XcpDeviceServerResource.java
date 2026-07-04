@@ -4,11 +4,12 @@ import cc.openxiot.common.filter.PrivateNetwork;
 import cc.openxiot.common.response.OxResponse;
 import cc.openxiot.device.api.accesspoint.session.XcpDeviceEndpoint;
 import cc.openxiot.device.api.accesspoint.session.XcpDeviceEndpointManager;
+import cn.geekcity.xiot.spec.codec.vertx.operation.PropertyOperationCodec;
+import cn.geekcity.xiot.spec.operation.PropertyOperation;
 import jakarta.enterprise.context.RequestScoped;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.*;
+import jakarta.ws.rs.core.Context;
+import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
@@ -16,7 +17,10 @@ import org.jboss.logging.Logger;
 
 import jakarta.inject.Inject;
 
+import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.CompletionStage;
 
 @PrivateNetwork
 @Path("/v1/private")
@@ -45,5 +49,25 @@ public class XcpDeviceServerResource {
             return OxResponse.ok(Map.of("id", id, "status", "offline"));
         }
         return OxResponse.ok(Map.of("id", s.id(), "status", "online"));
+    }
+
+    @GET
+    @Path("/properties")
+    public CompletionStage<Response> getProperties(
+            @QueryParam("pid") List<String> pid,
+            @Context HttpHeaders headers
+    ) {
+        // traceId: 优先取链路追踪的 X-Request-Id，没有则生成 UUID
+        String traceId = headers.getHeaderString("X-Request-Id");
+        if (traceId == null || traceId.isBlank()) {
+            traceId = UUID.randomUUID().toString();
+        }
+
+        List<PropertyOperation> properties = pid.stream().map(PropertyOperation::new).toList();
+
+        return manager.getProperties(traceId, properties)
+                .map(list -> OxResponse.ok(PropertyOperationCodec.Get.RESULT.encode(list)))
+                .otherwise(e -> OxResponse.error(e.getMessage()))
+                .toCompletionStage();
     }
 }
