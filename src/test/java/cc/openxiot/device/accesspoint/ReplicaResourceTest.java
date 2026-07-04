@@ -8,11 +8,11 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 
 @QuarkusTest
-class HostnameResourceTest {
+class ReplicaResourceTest {
     @Test
     void testInstanceIdEndpoint() {
         given()
-          .when().get("/v1/instance/id")
+          .when().get("/v1/replica/id")
           .then()
              .statusCode(200)
              .body("success", is(true))
@@ -22,7 +22,7 @@ class HostnameResourceTest {
     @Test
     void testIpEndpoint() {
         given()
-          .when().get("/v1/instance/ip")
+          .when().get("/v1/replica/ip")
           .then()
              .statusCode(200)
              .body("success", is(true))

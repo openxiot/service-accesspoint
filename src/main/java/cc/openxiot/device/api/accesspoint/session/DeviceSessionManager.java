@@ -1,4 +1,4 @@
-package cc.openxiot.device.api.accesspoint;
+package cc.openxiot.device.api.accesspoint.session;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.concurrent.ConcurrentHashMap;

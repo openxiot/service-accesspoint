@@ -2,6 +2,8 @@ package cc.openxiot.device.api.accesspoint;
 
 import cc.openxiot.common.filter.PrivateNetwork;
 import cc.openxiot.common.response.OxResponse;
+import cc.openxiot.device.api.accesspoint.session.DeviceSession;
+import cc.openxiot.device.api.accesspoint.session.DeviceSessionManager;
 import jakarta.enterprise.context.RequestScoped;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
@@ -14,12 +16,14 @@ import org.jboss.logging.Logger;
 
 import jakarta.inject.Inject;
 
+import java.util.Map;
+
 @PrivateNetwork
-@Path("/v1/hello/private")
+@Path("/v1/private")
 @Produces(MediaType.APPLICATION_JSON)
-@Tag(name = "Hello Private", description = "Private Hello API (internal network only)")
+@Tag(name = "Private API", description = "Private API (internal network only)")
 @RequestScoped
-public class HelloPrivateResource {
+public class XcpDeviceServerResource {
 
     @Inject
     Logger logger;
@@ -36,10 +40,10 @@ public class HelloPrivateResource {
     @GET
     @Path("/session/{did}")
     public Response getSession(@PathParam("did") String did) {
-        DeviceSession ds = sessionManager.get(did);
-        if (ds == null) {
-            return OxResponse.ok(java.util.Map.of("did", did, "cn", "not found"));
+        DeviceSession s = sessionManager.get(did);
+        if (s == null) {
+            return OxResponse.ok(Map.of("did", did, "status", "offline"));
         }
-        return OxResponse.ok(java.util.Map.of("did", ds.did, "cn", ds.cn));
+        return OxResponse.ok(Map.of("did", s.did, "status", "online"));
     }
 }

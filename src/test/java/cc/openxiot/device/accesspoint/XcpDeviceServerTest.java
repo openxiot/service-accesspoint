@@ -30,7 +30,7 @@ class XcpDeviceServerTest {
 
         WebSocketContainer container = ContainerProvider.getWebSocketContainer();
         Session session = container.connectToServer(client,
-                URI.create("ws://localhost:8081/test-device-001"));
+                URI.create("ws://localhost:8081/test-device-001/gateway"));
 
         String pingJson = stanzaCodec.encode(new Ping.Query("ping-1")).encode();
         session.getAsyncRemote().sendText(pingJson);

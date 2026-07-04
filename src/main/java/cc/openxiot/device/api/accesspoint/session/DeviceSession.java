@@ -1,15 +1,13 @@
-package cc.openxiot.device.api.accesspoint;
+package cc.openxiot.device.api.accesspoint.session;
 
 import jakarta.websocket.Session;
 
 public class DeviceSession {
     public final String did;
-    public final String cn;
     public final Session session;
 
-    public DeviceSession(String did, String cn, Session session) {
+    public DeviceSession(String did, Session session) {
         this.did = did;
-        this.cn = cn;
         this.session = session;
 
         // session.getAsyncRemote().sendText("hello");
