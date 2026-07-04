@@ -47,14 +47,8 @@ public class XcpDeviceEndpointManager {
         handler.onActive(endpoint);
     }
 
-    // devices: <did, endpointId>
     private void save(DeviceImage device, String endpointId) {
-        if (device.did() == null) {
-            logger.warn("skip save: device did is null");
-            return;
-        }
-
-        logger.info(String.format("save, did %s on endpoint(%s)", device.did(), endpointId));
+        logger.infov("save: {0} => {1}", device.did(), endpointId);
 
         devices.put(device.did(), endpointId);
 
@@ -101,10 +95,10 @@ public class XcpDeviceEndpointManager {
             if (endpoint != null) {
                 return endpoint.root().getShadow(did);
             } else {
-                logger.error("endpoint not found: " + endpointId);
+                logger.errorv("endpoint not found: {0}", endpointId);
             }
         } else {
-            logger.error("endpointId not found: " + did);
+            logger.errorv("endpointId not found: {0}", did);
         }
 
         return Collections.emptyList();
@@ -117,10 +111,10 @@ public class XcpDeviceEndpointManager {
             if (endpoint != null) {
                 endpoint.send(message);
             } else {
-                logger.error("endpoint not found: " + endpointId);
+                logger.errorv("endpoint not found: {0}", endpointId);
             }
         } else {
-            logger.error("endpointId not found: " + did);
+            logger.errorv("endpointId not found: {0}", did);
         }
     }
 
@@ -240,7 +234,7 @@ public class XcpDeviceEndpointManager {
                     .map(x -> new JsonObject().put("did", x.getKey()).put("endpointId", x.getValue()))
                     .collect(Collectors.toList()));
 
-            logger.info(did + " not found in: " + array.encode());
+            logger.infov("{0} not found in: {1}", did, array.encode());
 
             properties.forEach(x -> x.status(Status.DEVICE_ID_NOT_EXIST).description("device not found"));
             promise.complete(properties);
@@ -347,7 +341,7 @@ public class XcpDeviceEndpointManager {
             JsonArray array = new JsonArray(devices.entrySet().stream()
                     .map(x -> new JsonObject().put("did", x.getKey()).put("endpointId", x.getValue()))
                     .collect(Collectors.toList()));
-            logger.info(property.did() + " not found in: " + array.encode());
+            logger.infov("{0} not found in: {1}", property.did(), array.encode());
             property.status(Status.DEVICE_ID_NOT_EXIST, "device not found");
             promise.complete(property);
         }
@@ -385,7 +379,7 @@ public class XcpDeviceEndpointManager {
             JsonArray array = new JsonArray(devices.entrySet().stream()
                     .map(x -> new JsonObject().put("did", x.getKey()).put("endpointId", x.getValue()))
                     .collect(Collectors.toList()));
-            logger.info(property.did() + " not found in: " + array.encode());
+            logger.infov("{0} not found in: {1}", property.did(), array.encode());
             property.status(Status.DEVICE_ID_NOT_EXIST, "device not found");
             promise.complete(property);
         }
@@ -423,7 +417,7 @@ public class XcpDeviceEndpointManager {
             JsonArray array = new JsonArray(devices.entrySet().stream()
                     .map(x -> new JsonObject().put("did", x.getKey()).put("endpointId", x.getValue()))
                     .collect(Collectors.toList()));
-            logger.info(action.did() + " not found in: " + array.encode());
+            logger.infov("{0} not found in: {1}", action.did(), array.encode());
             action.status(Status.DEVICE_ID_NOT_EXIST).description("device not found");
             promise.complete(action);
         }
