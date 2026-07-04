@@ -2,8 +2,8 @@ package cc.openxiot.device.api.accesspoint;
 
 import cc.openxiot.common.filter.PrivateNetwork;
 import cc.openxiot.common.response.OxResponse;
-import cc.openxiot.device.api.accesspoint.session.DeviceSession;
-import cc.openxiot.device.api.accesspoint.session.DeviceSessionManager;
+import cc.openxiot.device.api.accesspoint.session.XcpDeviceEndpoint;
+import cc.openxiot.device.api.accesspoint.session.XcpDeviceEndpointManager;
 import jakarta.enterprise.context.RequestScoped;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
@@ -29,7 +29,7 @@ public class XcpDeviceServerResource {
     Logger logger;
 
     @Inject
-    DeviceSessionManager sessionManager;
+    XcpDeviceEndpointManager manager;
 
     @GET
     public Response hello() {
@@ -38,12 +38,12 @@ public class XcpDeviceServerResource {
     }
 
     @GET
-    @Path("/session/{did}")
-    public Response getSession(@PathParam("did") String did) {
-        DeviceSession s = sessionManager.get(did);
+    @Path("/session/{id}")
+    public Response getSession(@PathParam("id") String id) {
+        XcpDeviceEndpoint s = manager.getEndpoint(id);
         if (s == null) {
-            return OxResponse.ok(Map.of("did", did, "status", "offline"));
+            return OxResponse.ok(Map.of("id", id, "status", "offline"));
         }
-        return OxResponse.ok(Map.of("did", s.did, "status", "online"));
+        return OxResponse.ok(Map.of("id", s.id(), "status", "online"));
     }
 }
