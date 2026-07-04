@@ -8,6 +8,7 @@ import java.net.URI;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -27,7 +28,7 @@ class XcpDeviceServerTest {
 
         WebSocketContainer container = ContainerProvider.getWebSocketContainer();
         Session session = container.connectToServer(client,
-                URI.create("ws://localhost:8081/test-device-001/gateway"));
+                URI.create("ws://localhost:8081/v1/test-device-001/gateway"));
 
         assertTrue(latch.await(10, TimeUnit.SECONDS), "timed out waiting for onOpen");
         assertTrue(opened.get().isOpen());
@@ -37,7 +38,7 @@ class XcpDeviceServerTest {
 
     @ClientEndpoint
     static class TestClient {
-        java.util.function.Consumer<Session> onOpen;
+        Consumer<Session> onOpen;
 
         @OnOpen
         void onOpen(Session session) {

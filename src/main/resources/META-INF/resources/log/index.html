@@ -47,7 +47,7 @@
     var el = document.getElementById('log');
     var evt = new EventSource('/log/stream');
     evt.onmessage = function (e) {
-        el.textContent += e.data + '\n';
+        el.textContent += e.data.replace(/\\n/g, '\n') + '\n';
         el.scrollTop = el.scrollHeight;
     };
     evt.onerror = function () {

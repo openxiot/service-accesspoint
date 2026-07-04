@@ -39,8 +39,7 @@ public class XcpDeviceEndpointManager {
     public void add(XcpDeviceEndpoint endpoint) {
         endpoints.put(endpoint.id(), endpoint);
 
-        // save: <did, endpointId> => devices
-        save(endpoint.id(), endpoint.root());
+        save(endpoint.root(), endpoint.id());
 
         // 修正根设备的在线时间。
         endpoint.root().summary().lastOnline(new Date());
@@ -48,11 +47,19 @@ public class XcpDeviceEndpointManager {
         handler.onActive(endpoint);
     }
 
-    private void save(String endpointId, DeviceImage device) {
+    // devices: <did, endpointId>
+    private void save(DeviceImage device, String endpointId) {
+        if (device.did() == null) {
+            logger.warn("skip save: device did is null");
+            return;
+        }
+
         logger.info(String.format("save, did %s on endpoint(%s)", device.did(), endpointId));
+
         devices.put(device.did(), endpointId);
+
         for (DeviceImage child : device.children().values()) {
-            save(endpointId, child);
+            save(child, endpointId);
         }
     }
 

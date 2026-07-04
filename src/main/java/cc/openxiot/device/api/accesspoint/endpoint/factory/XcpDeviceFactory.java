@@ -1,12 +1,14 @@
 package cc.openxiot.device.api.accesspoint.endpoint.factory;
 
+import cn.geekcity.xiot.spec.codec.vertx.image.DeviceImageCodec;
 import cn.geekcity.xiot.spec.device.Device;
 import cn.geekcity.xiot.spec.image.DeviceImage;
 import cn.geekcity.xiot.spec.summary.Summary;
+import io.vertx.core.json.JsonObject;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import jakarta.json.JsonObject;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
+import org.jboss.logging.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,23 +16,24 @@ import java.util.List;
 @ApplicationScoped
 public class XcpDeviceFactory {
 
+    private static final Logger logger = Logger.getLogger(XcpDeviceFactory.class);
+
     @Inject
     @RestClient
     ProductCenter center;
 
-    /**
-     * 根据设备ID和摘要信息创建新的DeviceImage实例。
-     *
-     * @param did 设备ID
-     * @param summary 摘要信息
-     * @return 返回一个表示新创建的DeviceImage实例的Future对象
-     */
     public DeviceImage newInstance(String did, Summary summary) {
-        JsonObject o = center.getInstance(summary.type().toString());
-        boolean success = o.getBoolean("success", false);
-        if (success) {
-            JsonObject data = o.getJsonObject("data");
-            return DeviceImageMapper.toImage(data.toString());
+        logger.infov("newInstance for did={0}, type={1}", did, summary.type());
+
+        try {
+            JsonObject o = new JsonObject(center.getInstance(summary.type().toString()));
+            boolean success = o.getBoolean("success", false);
+            JsonObject data = o.getJsonObject("data", null);
+            if (success && data != null) {
+                return DeviceImageCodec.decode(data).did(did).summary(summary);
+            }
+        } catch (Exception e) {
+            logger.warnv("Failed to get instance for did={0}, type={1}: {2}", did, summary.type(), e.getMessage());
         }
 
         return null;

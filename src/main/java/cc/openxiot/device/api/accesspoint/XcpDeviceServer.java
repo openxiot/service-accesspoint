@@ -16,7 +16,7 @@ import jakarta.websocket.server.ServerEndpoint;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
 
-@ServerEndpoint(value = "/{did}/{type}", configurator = XcpCertConfigurator.class)
+@ServerEndpoint(value = "/v1/{did}/{type}", configurator = XcpCertConfigurator.class)
 @ApplicationScoped
 public class XcpDeviceServer {
 

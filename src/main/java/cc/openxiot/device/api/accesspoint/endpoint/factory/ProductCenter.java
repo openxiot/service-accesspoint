@@ -1,6 +1,5 @@
 package cc.openxiot.device.api.accesspoint.endpoint.factory;
 
-import jakarta.json.JsonObject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
@@ -10,7 +9,7 @@ import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
 public interface ProductCenter {
 
     @GET
-    @Path("/instance/{type}")
+    @Path("/instance/one/{type}")
     @Produces(MediaType.APPLICATION_JSON)
-    JsonObject getInstance(@PathParam("type") String type);
+    String getInstance(@PathParam("type") String type);
 }

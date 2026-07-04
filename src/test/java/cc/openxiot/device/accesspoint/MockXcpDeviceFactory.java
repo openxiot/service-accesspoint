@@ -1,11 +1,9 @@
 package cc.openxiot.device.accesspoint;
 
 import cc.openxiot.device.api.accesspoint.endpoint.factory.XcpDeviceFactory;
-import cn.geekcity.xiot.spec.codec.vertx.image.DeviceImageCodec;
 import cn.geekcity.xiot.spec.device.Device;
 import cn.geekcity.xiot.spec.image.DeviceImage;
 import cn.geekcity.xiot.spec.summary.Summary;
-import io.vertx.core.json.JsonObject;
 import jakarta.annotation.Priority;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Alternative;
@@ -20,13 +18,10 @@ public class MockXcpDeviceFactory extends XcpDeviceFactory {
 
     @Override
     public DeviceImage newInstance(String did, Summary summary) {
-        JsonObject json = new JsonObject()
-                .put("did", did)
-                .put("type", summary.type())
-                .put("online", summary.online())
-                .put("protocol", summary.protocol());
-        JsonObject root = new JsonObject().put("device", json);
-        return DeviceImageCodec.decode(root);
+        DeviceImage image = new DeviceImage(summary.type());
+        image.did(did);
+        image.summary(summary);
+        return image;
     }
 
     @Override
