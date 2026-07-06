@@ -2,7 +2,6 @@ package cc.openxiot.device.api.accesspoint.server.endpoint.event;
 
 import cn.geekcity.xiot.spec.codec.vertx.notice.DeviceNoticeCodec;
 import cn.geekcity.xiot.spec.notice.device.DeviceNotice;
-import io.vertx.core.json.JsonObject;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
@@ -21,9 +20,10 @@ public class DeviceEventService {
     DeviceNoticeCodec codec = new DeviceNoticeCodec();
 
     public void publish(DeviceNotice notice) {
-        JsonObject o = codec.encode(notice);
         try {
-            publisher.publish(notice.subType(), o.encode());
+            String body = codec.encode(notice).toString();
+            logger.infov("public: {0}", body);
+            publisher.publish(notice.subType(), body);
         } catch (Exception e) {
             logger.error("publish error: ", e);
         }
