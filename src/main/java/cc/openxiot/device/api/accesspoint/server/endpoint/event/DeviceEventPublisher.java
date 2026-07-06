@@ -4,7 +4,7 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
 
-@Path("/v1/event")
+@Path("/device/v1/event")
 @RegisterRestClient(configKey = "device-event-api")
 public interface DeviceEventPublisher {
 
