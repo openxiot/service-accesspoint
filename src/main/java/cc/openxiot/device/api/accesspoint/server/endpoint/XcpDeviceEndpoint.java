@@ -60,6 +60,10 @@ public class XcpDeviceEndpoint {
         return this.session.getId();
     }
 
+    public Session session() {
+        return session;
+    }
+
     public DeviceImage root() {
         return root;
     }
@@ -95,7 +99,11 @@ public class XcpDeviceEndpoint {
 
     private void write(Stanza stanza) {
         JsonObject json = codec.encode(stanza);
-        session.getAsyncRemote().sendText(json.encode());
+        session.getAsyncRemote().sendText(json.encode(), result -> {
+            if (!result.isOK()) {
+                logger.errorv("Failed to send stanza to {0}: {1}", id(), result.getException().getMessage());
+            }
+        });
     }
 
     /**

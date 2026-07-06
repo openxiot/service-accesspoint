@@ -21,7 +21,7 @@ public class DeviceRegistryMapper {
         entity.protocol = summary.protocol();
         entity.parentId = summary.parentId();
         entity.rootId = summary.rootId();
-        entity.memers = summary.members() != null ? new ArrayList<>(summary.members()) : null;
+        entity.members = summary.members() != null ? new ArrayList<>(summary.members()) : null;
         entity.lastOnline = summary.lastOnline();
         entity.lastOffline = summary.lastOffline();
         return entity;
@@ -39,8 +39,8 @@ public class DeviceRegistryMapper {
                 .parentId(entity.parentId)
                 .rootId(entity.rootId);
 
-        if (entity.memers != null) {
-            summary.members(entity.memers);
+        if (entity.members != null) {
+            summary.members(entity.members);
         }
 
         if (entity.lastOnline != null) {

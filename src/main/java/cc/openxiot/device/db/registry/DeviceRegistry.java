@@ -36,7 +36,7 @@ public class DeviceRegistry extends PanacheMongoEntityBase {
     public String rootId;
 
     @Schema(description = "成员设备（仅对设备组有效）", required = false)
-    public List<String> memers;
+    public List<String> members;
 
     @Schema(description = "最后一次上线时间", required = false)
     public Date lastOnline;

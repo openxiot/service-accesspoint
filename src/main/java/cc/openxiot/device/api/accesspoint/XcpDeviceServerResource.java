@@ -24,6 +24,7 @@ import jakarta.inject.Inject;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
 
@@ -66,6 +67,9 @@ public class XcpDeviceServerResource {
     @Path("/properties")
     public CompletionStage<Response> getProperties(@Context HttpHeaders headers, @QueryParam("pid") List<String> pid) {
         String traceId = resolveTraceId(headers);
+        if (pid == null || pid.isEmpty()) {
+            return CompletableFuture.completedFuture(OxResponse.error("pid is required"));
+        }
         List<PropertyOperation> properties = pid.stream().map(PropertyOperation::new).toList();
         return manager.getProperties(traceId, properties)
                 .map(list -> OxResponse.ok(PropertyOperationCodec.Get.RESULT.encode(list)))

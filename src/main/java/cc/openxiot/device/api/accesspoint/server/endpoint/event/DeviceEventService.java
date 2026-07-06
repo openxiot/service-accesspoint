@@ -6,9 +6,13 @@ import io.vertx.core.json.JsonObject;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
+import org.jboss.logging.Logger;
 
 @ApplicationScoped
 public class DeviceEventService {
+
+    @Inject
+    Logger logger;
 
     @Inject
     @RestClient
@@ -18,6 +22,10 @@ public class DeviceEventService {
 
     public void publish(DeviceNotice notice) {
         JsonObject o = codec.encode(notice);
-        publisher.publish(notice.subType(), o.encode());
+        try {
+            publisher.publish(notice.subType(), o.encode());
+        } catch (Exception e) {
+            logger.error("publish error: ", e);
+        }
     }
 }

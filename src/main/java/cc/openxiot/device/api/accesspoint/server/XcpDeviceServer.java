@@ -48,8 +48,8 @@ public class XcpDeviceServer {
             @PathParam("did") String did,
             @PathParam("type") String type
     ) {
-        String cert = config.getUserProperties().containsKey("XCP_CLIENT_CERT")
-                ? (String) config.getUserProperties().get("XCP_CLIENT_CERT")
+        String cert = config.getUserProperties().containsKey("XCP_CLIENT_CN")
+                ? (String) config.getUserProperties().get("XCP_CLIENT_CN")
                 : "unknown";
 
         // 校验证书 CN 与设备 ID 一致（skip 本地开发环境无证书的情况）

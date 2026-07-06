@@ -45,6 +45,15 @@ public class XcpDeviceEndpointManager {
         endpoint.root().summary().lastOnline(new Date());
 
         handler.onActive(endpoint);
+
+        // Guard: 如果 session 已关闭（onClose 在 add 完成前触发），立即清理
+        if (!endpoint.session().isOpen()) {
+            XcpDeviceEndpoint removed = endpoints.remove(endpoint.id());
+            if (removed != null) {
+                removeDeviceTree(removed.root());
+                handler.onInactive(removed);
+            }
+        }
     }
 
     private void save(DeviceImage device, String endpointId) {
@@ -60,8 +69,15 @@ public class XcpDeviceEndpointManager {
     public void remove(String id) {
         XcpDeviceEndpoint endpoint = endpoints.remove(id);
         if (endpoint != null) {
-            devices.remove(endpoint.root().did());
+            removeDeviceTree(endpoint.root());
             handler.onInactive(endpoint);
+        }
+    }
+
+    private void removeDeviceTree(DeviceImage device) {
+        devices.remove(device.did());
+        for (DeviceImage child : device.children().values()) {
+            removeDeviceTree(child);
         }
     }
 

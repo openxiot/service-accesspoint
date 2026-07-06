@@ -14,7 +14,7 @@ public class XcpCertConfigurator extends ServerEndpointConfig.Configurator {
     @Override
     public void modifyHandshake(ServerEndpointConfig config, HandshakeRequest request, HandshakeResponse response) {
         String cn = extractCnFromHeader(request);
-        config.getUserProperties().put("XCP_CLIENT_CERT", cn != null ? cn : "unknown");
+        config.getUserProperties().put("XCP_CLIENT_CN", cn != null ? cn : "unknown");
     }
 
     private String extractCnFromHeader(HandshakeRequest request) {
@@ -54,7 +54,18 @@ public class XcpCertConfigurator extends ServerEndpointConfig.Configurator {
                 return "parse-failed";
             }
 
-            byte[] der = Base64.getDecoder().decode(headerValue.substring(start, end));
+            String certData = headerValue.substring(start, end);
+
+            // PEM 格式（含 -----BEGIN CERTIFICATE----- 头尾）
+            if (certData.contains("-----BEGIN")) {
+                CertificateFactory cf = CertificateFactory.getInstance("X.509");
+                X509Certificate cert = (X509Certificate) cf.generateCertificate(
+                        new ByteArrayInputStream(certData.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+                return cert.getSubjectX500Principal().getName();
+            }
+
+            // fallback: 裸 Base64（无 PEM 头尾）
+            byte[] der = Base64.getDecoder().decode(certData);
             CertificateFactory cf = CertificateFactory.getInstance("X.509");
             X509Certificate cert = (X509Certificate) cf.generateCertificate(new ByteArrayInputStream(der));
             return cert.getSubjectX500Principal().getName();
