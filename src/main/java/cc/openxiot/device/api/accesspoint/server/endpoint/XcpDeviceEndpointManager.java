@@ -1,4 +1,4 @@
-package cc.openxiot.device.api.accesspoint.endpoint;
+package cc.openxiot.device.api.accesspoint.server.endpoint;
 
 import cn.geekcity.xiot.spec.device.Device;
 import cn.geekcity.xiot.spec.error.IotError;

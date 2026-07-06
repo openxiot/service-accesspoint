@@ -1,4 +1,4 @@
-package cc.openxiot.device.api.accesspoint.endpoint.factory;
+package cc.openxiot.device.api.accesspoint.server.endpoint.factory;
 
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;

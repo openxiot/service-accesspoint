@@ -2,8 +2,8 @@ package cc.openxiot.device.api.accesspoint;
 
 import cc.openxiot.common.filter.PrivateNetwork;
 import cc.openxiot.common.response.OxResponse;
-import cc.openxiot.device.api.accesspoint.endpoint.XcpDeviceEndpoint;
-import cc.openxiot.device.api.accesspoint.endpoint.XcpDeviceEndpointManager;
+import cc.openxiot.device.api.accesspoint.server.endpoint.XcpDeviceEndpoint;
+import cc.openxiot.device.api.accesspoint.server.endpoint.XcpDeviceEndpointManager;
 import cn.geekcity.xiot.spec.codec.vertx.device.DeviceCodec;
 import cn.geekcity.xiot.spec.codec.vertx.operation.ActionOperationCodec;
 import cn.geekcity.xiot.spec.codec.vertx.operation.PropertyOperationCodec;
@@ -64,10 +64,7 @@ public class XcpDeviceServerResource {
 
     @GET
     @Path("/properties")
-    public CompletionStage<Response> getProperties(
-            @QueryParam("pid") List<String> pid,
-            @Context HttpHeaders headers
-    ) {
+    public CompletionStage<Response> getProperties(@Context HttpHeaders headers, @QueryParam("pid") List<String> pid) {
         String traceId = resolveTraceId(headers);
         List<PropertyOperation> properties = pid.stream().map(PropertyOperation::new).toList();
         return manager.getProperties(traceId, properties)
@@ -79,10 +76,7 @@ public class XcpDeviceServerResource {
     @POST
     @Path("/properties")
     @Consumes(MediaType.APPLICATION_JSON)
-    public CompletionStage<Response> setProperties(
-            String body,
-            @Context HttpHeaders headers
-    ) {
+    public CompletionStage<Response> setProperties(@Context HttpHeaders headers, String body) {
         String traceId = resolveTraceId(headers);
         JsonArray array = new JsonArray(body);
         List<PropertyOperation> properties = array.stream()
@@ -97,10 +91,7 @@ public class XcpDeviceServerResource {
     @POST
     @Path("/actions")
     @Consumes(MediaType.APPLICATION_JSON)
-    public CompletionStage<Response> invokeActions(
-            String body,
-            @Context HttpHeaders headers
-    ) {
+    public CompletionStage<Response> invokeActions(@Context HttpHeaders headers, String body) {
         String traceId = resolveTraceId(headers);
         JsonArray array = new JsonArray(body);
         List<ActionOperation> actions = array.stream()

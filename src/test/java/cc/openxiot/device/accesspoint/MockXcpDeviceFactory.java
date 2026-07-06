@@ -1,6 +1,6 @@
 package cc.openxiot.device.accesspoint;
 
-import cc.openxiot.device.api.accesspoint.endpoint.factory.XcpDeviceFactory;
+import cc.openxiot.device.api.accesspoint.server.endpoint.factory.XcpDeviceFactory;
 import cn.geekcity.xiot.spec.device.Device;
 import cn.geekcity.xiot.spec.image.DeviceImage;
 import cn.geekcity.xiot.spec.summary.Summary;

@@ -1,4 +1,4 @@
-package cc.openxiot.device.api.accesspoint.configurator;
+package cc.openxiot.device.api.accesspoint.server.configurator;
 
 import jakarta.websocket.HandshakeResponse;
 import jakarta.websocket.server.HandshakeRequest;

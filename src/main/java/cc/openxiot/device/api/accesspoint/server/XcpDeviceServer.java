@@ -1,10 +1,10 @@
-package cc.openxiot.device.api.accesspoint;
+package cc.openxiot.device.api.accesspoint.server;
 
-import cc.openxiot.device.api.accesspoint.configurator.XcpCertConfigurator;
-import cc.openxiot.device.api.accesspoint.limiter.RateLimiter;
-import cc.openxiot.device.api.accesspoint.endpoint.XcpDeviceEndpoint;
-import cc.openxiot.device.api.accesspoint.endpoint.XcpDeviceEndpointManager;
-import cc.openxiot.device.api.accesspoint.endpoint.factory.XcpDeviceFactory;
+import cc.openxiot.device.api.accesspoint.server.configurator.XcpCertConfigurator;
+import cc.openxiot.device.api.accesspoint.server.limiter.RateLimiter;
+import cc.openxiot.device.api.accesspoint.server.endpoint.XcpDeviceEndpoint;
+import cc.openxiot.device.api.accesspoint.server.endpoint.XcpDeviceEndpointManager;
+import cc.openxiot.device.api.accesspoint.server.endpoint.factory.XcpDeviceFactory;
 import cc.openxiot.device.api.accesspoint.replica.ReplicaService;
 import cn.geekcity.xiot.spec.image.DeviceImage;
 import cn.geekcity.xiot.spec.summary.Summary;
@@ -104,7 +104,7 @@ public class XcpDeviceServer {
 
             return;
         }
-        
+
         logger.infov("onMessage: did = {0}, sessionId = {1}, text = {2}", did, session.getId(), text);
 
         XcpDeviceEndpoint endpoint = manager.getEndpoint(did);

@@ -1,4 +1,4 @@
-package cc.openxiot.device.api.accesspoint.limiter;
+package cc.openxiot.device.api.accesspoint.server.limiter;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.concurrent.ConcurrentHashMap;
