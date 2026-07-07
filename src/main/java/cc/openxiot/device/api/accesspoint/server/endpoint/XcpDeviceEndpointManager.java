@@ -12,6 +12,9 @@ import cn.geekcity.xiot.xcp.stanza.iq.IQ;
 import cn.geekcity.xiot.xcp.stanza.iq.device.control.*;
 import cn.geekcity.xiot.xcp.stanza.message.Message;
 import cc.openxiot.common.util.FutureMerger;
+import cc.openxiot.device.api.accesspoint.server.endpoint.detector.DetectorService;
+import cc.openxiot.device.db.registry.DeviceRegistry;
+import cc.openxiot.device.db.registry.DeviceRegistryRepository;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
@@ -33,10 +36,21 @@ public class XcpDeviceEndpointManager {
     @Inject
     XcpDeviceEndpointHandler handler;
 
+    @Inject
+    DeviceRegistryRepository registry;
+
+    @Inject
+    DetectorService detector;
+
     private final ConcurrentHashMap<String, XcpDeviceEndpoint> endpoints = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, String> devices = new ConcurrentHashMap<>();
 
-    public void add(XcpDeviceEndpoint endpoint) {
+    public boolean add(XcpDeviceEndpoint endpoint) {
+        if (isOnline(endpoint.root().did())) {
+            logger.infov("device already online: {0}", endpoint.root().did());
+            return false;
+        }
+
         endpoints.put(endpoint.id(), endpoint);
 
         save(endpoint.root(), endpoint.id());
@@ -54,6 +68,8 @@ public class XcpDeviceEndpointManager {
                 handler.onInactive(removed);
             }
         }
+
+        return true;
     }
 
     private void save(DeviceImage device, String endpointId) {
@@ -81,6 +97,30 @@ public class XcpDeviceEndpointManager {
         }
     }
 
+    /**
+     * 判断设备是否在线。
+     * <p>先查本地 devices 内存表，命中则一定在本实例在线；
+     * 不命中则查 DB，DB 说在线则探测原接入点确认是否真在线（防僵尸）。</p>
+     */
+    public boolean isOnline(String did) {
+        if (devices.containsKey(did)) {
+            return true;
+        }
+
+        DeviceRegistry device = registry.get(did);
+        if (device == null || !device.online) {
+            return false;
+        }
+
+        // DB 说在线，但不在本实例 → 探测原接入点确认
+        boolean online = detector.probe(did, device.accessPoint);
+        if (!online) {
+            logger.warnv("device is zombie (DB online but probe failed), did={0}, accessPoint={1}", did, device.accessPoint);
+        }
+
+        return online;
+    }
+
     public XcpDeviceEndpoint getEndpoint(String did) {
         String endpointId = devices.get(did);
         return endpointId != null ? endpoints.get(endpointId) : null;
@@ -102,6 +142,10 @@ public class XcpDeviceEndpointManager {
         }
 
         return list;
+    }
+
+    public boolean probe(String did) {
+        return devices.contains(did);
     }
 
     public List<Shadow> getShadow(String did) {

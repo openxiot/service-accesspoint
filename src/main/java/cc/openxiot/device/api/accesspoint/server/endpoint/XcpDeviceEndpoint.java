@@ -44,7 +44,8 @@ public class XcpDeviceEndpoint {
     XcpDeviceEndpointHandler handler;
 
     private static final Logger logger = Logger.getLogger(XcpDeviceEndpoint.class);
-    private static final int DEFAULT_QUERY_TIMEOUT_MS = 3 * 1000;
+    private static final int DEFAULT_QUERY_TIMEOUT_MS = 3_000;
+    private static final int DEFAULT_MAX_IDLE_TIMEOUT_MS = 30_000;
 
     private final Vertx vertx;
     private final String replicaIp;
@@ -63,7 +64,7 @@ public class XcpDeviceEndpoint {
         this.root = image;
         this.codec = codec;
 
-        this.session.setMaxIdleTimeout(60_000);
+        this.session.setMaxIdleTimeout(DEFAULT_MAX_IDLE_TIMEOUT_MS);
 
         this.addQueryHandler(Ping.METHOD, this::onPing);
         this.addQueryHandler(GetAccessKey.METHOD, this::onGetAccessKey);

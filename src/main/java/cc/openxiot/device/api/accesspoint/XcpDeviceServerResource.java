@@ -64,6 +64,13 @@ public class XcpDeviceServerResource {
     }
 
     @GET
+    @Path("/probe")
+    @Produces(MediaType.TEXT_PLAIN)
+    public Response probe(@QueryParam("did") String did) {
+        return Response.ok(String.valueOf(manager.probe(did))).build();
+    }
+
+    @GET
     @Path("/properties")
     public CompletionStage<Response> getProperties(@Context HttpHeaders headers, @QueryParam("pid") List<String> pid) {
         String traceId = resolveTraceId(headers);

@@ -17,6 +17,8 @@ import jakarta.websocket.server.ServerEndpoint;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
 
+import java.io.IOException;
+
 @ServerEndpoint(value = "/v1/{did}/{type}", configurator = XcpCertConfigurator.class)
 @ApplicationScoped
 public class XcpDeviceServer {
@@ -57,7 +59,7 @@ public class XcpDeviceServer {
             String cn = extractCn(cert);
             if (cn != null && !cn.equals(did)) {
                 logger.warnv("Reject device: CN mismatch, did={0}, cn={1}", did, cn);
-                session.setMaxIdleTimeout(1);
+                closeSession(session, "cert cn mismatch");
                 return;
             }
         }
@@ -65,11 +67,15 @@ public class XcpDeviceServer {
         logger.infov("XCP device connected: did={0}, sessionId={1}", did, session.getId());
 
         DeviceImage image = factory.newInstance(did, new Summary(type, true, "wss", null, did));
-        if (image != null) {
-            manager.add(new XcpDeviceEndpoint(vertx, replica.getIp(), session, image, codec));
-        } else {
+        if (image == null) {
             logger.warnv("Reject device, type not found from ProductCenter: did={0}, type={1}", did, type);
-            session.setMaxIdleTimeout(1);
+            closeSession(session, "device type not found");
+            return;
+        }
+
+        if (! manager.add(new XcpDeviceEndpoint(vertx, replica.getIp(), session, image, codec))) {
+            logger.warnv("Reject device, did already connected: {0}", did);
+            closeSession(session, "device already online");
         }
     }
 
@@ -90,6 +96,14 @@ public class XcpDeviceServer {
         return null;
     }
 
+    private static void closeSession(Session session, String reason) {
+        try {
+            session.close(new CloseReason(CloseReason.CloseCodes.VIOLATED_POLICY, reason));
+        } catch (IOException e) {
+            // ignore — session may already be closed
+        }
+    }
+
     @OnMessage
     public void onMessage(@PathParam("did") String did, Session session, String text) {
         // rate limit: per-device message throttle
@@ -105,7 +119,7 @@ public class XcpDeviceServer {
             return;
         }
 
-        logger.infov("onMessage: did = {0}, sessionId = {1}, text = {2}", did, session.getId(), text);
+        logger.infov("onMessage: did={0}, sessionId={1}, text ={2}", did, session.getId(), text);
 
         XcpDeviceEndpoint endpoint = manager.getEndpoint(did);
         if (endpoint != null) {
@@ -115,13 +129,13 @@ public class XcpDeviceServer {
 
     @OnClose
     public void onClose(Session session, @PathParam("did") String did) {
-        logger.infov("XCP device disconnected: did = {0}, sessionId = {1}", did, session.getId());
+        logger.infov("XCP device disconnected: did={0}, sessionId={1}", did, session.getId());
         manager.remove(session.getId());
         rateLimiter.remove(did);
     }
 
     @OnError
     public void onError(Session session, @PathParam("did") String did, Throwable throwable) {
-        logger.errorv(throwable, "XCP device error: did = {0}, sessionId = {1}", did, session.getId());
+        logger.errorv(throwable, "XCP device error: did={0}, sessionId={1}", did, session.getId());
     }
 }
