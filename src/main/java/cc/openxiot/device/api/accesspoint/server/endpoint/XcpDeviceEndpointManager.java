@@ -82,12 +82,14 @@ public class XcpDeviceEndpointManager {
         }
     }
 
-    public void remove(String id) {
+    public boolean remove(String id) {
         XcpDeviceEndpoint endpoint = endpoints.remove(id);
         if (endpoint != null) {
             removeDeviceTree(endpoint.root());
             handler.onInactive(endpoint);
+            return true;
         }
+        return false;
     }
 
     private void removeDeviceTree(DeviceImage device) {

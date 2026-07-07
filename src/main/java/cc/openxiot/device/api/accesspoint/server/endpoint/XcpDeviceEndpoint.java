@@ -124,7 +124,11 @@ public class XcpDeviceEndpoint {
 
     private void write(Stanza stanza) {
         JsonObject json = codec.encode(stanza);
-        session.getAsyncRemote().sendText(json.encode(), result -> {
+        String text = json.encode();
+
+        logger.infov("[{0}] send: {1}", root.did(), text);
+
+        session.getAsyncRemote().sendText(text, result -> {
             if (!result.isOK()) {
                 logger.errorv("Failed to send stanza to {0}: {1}", id(), result.getException().getMessage());
             }
@@ -312,6 +316,8 @@ public class XcpDeviceEndpoint {
 
     public void onReceive(String text) {
         try {
+            logger.infov("[{0}] recv: {1}", root.did(), text);
+
             JsonObject json = new JsonObject(text);
             handleStanza(codec.decode(json));
         } catch (DecodeException e) {

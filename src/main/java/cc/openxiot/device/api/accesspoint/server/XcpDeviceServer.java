@@ -119,8 +119,6 @@ public class XcpDeviceServer {
             return;
         }
 
-        logger.infov("onMessage: did={0}, sessionId={1}, text ={2}", did, session.getId(), text);
-
         XcpDeviceEndpoint endpoint = manager.getEndpoint(did);
         if (endpoint != null) {
             endpoint.onReceive(text);
@@ -130,8 +128,9 @@ public class XcpDeviceServer {
     @OnClose
     public void onClose(Session session, @PathParam("did") String did) {
         logger.infov("XCP device disconnected: did={0}, sessionId={1}", did, session.getId());
-        manager.remove(session.getId());
-        rateLimiter.remove(did);
+        if (manager.remove(session.getId())) {
+            rateLimiter.remove(did);
+        }
     }
 
     @OnError
