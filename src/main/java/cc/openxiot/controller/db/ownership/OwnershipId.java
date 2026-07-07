@@ -5,16 +5,16 @@ import io.quarkus.runtime.annotations.RegisterForReflection;
 import java.util.Objects;
 
 @RegisterForReflection
-public class OwnershipKey {
+public class OwnershipId {
 
     public String did;
     public String appId;
     public String ownerId;
 
-    public OwnershipKey() {
+    public OwnershipId() {
     }
 
-    public OwnershipKey(String did, String appId, String ownerId) {
+    public OwnershipId(String did, String appId, String ownerId) {
         this.did = did;
         this.appId = appId;
         this.ownerId = ownerId;
@@ -26,7 +26,7 @@ public class OwnershipKey {
             return true;
         }
 
-        if (!(o instanceof OwnershipKey that)) {
+        if (!(o instanceof OwnershipId that)) {
             return false;
         }
 

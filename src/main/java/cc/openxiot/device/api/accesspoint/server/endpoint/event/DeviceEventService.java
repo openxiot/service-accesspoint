@@ -22,7 +22,7 @@ public class DeviceEventService {
     public void publish(DeviceNotice notice) {
         try {
             String body = codec.encode(notice).toString();
-            logger.infov("public: {0}", body);
+            logger.infov("publish: {0}", body);
             publisher.publish(notice.subType(), body);
         } catch (Exception e) {
             logger.error("publish error: ", e);

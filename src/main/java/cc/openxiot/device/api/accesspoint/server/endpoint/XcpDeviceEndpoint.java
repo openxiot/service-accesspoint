@@ -1,10 +1,12 @@
 package cc.openxiot.device.api.accesspoint.server.endpoint;
 
+import cn.geekcity.xiot.spec.constant.Constant;
 import cn.geekcity.xiot.spec.error.IotError;
 import cn.geekcity.xiot.spec.image.DeviceImage;
 import cn.geekcity.xiot.spec.notice.Notice;
 import cn.geekcity.xiot.spec.operation.ActionOperation;
 import cn.geekcity.xiot.spec.operation.PropertyOperation;
+import cn.geekcity.xiot.spec.ownership.DeviceOwner;
 import cn.geekcity.xiot.spec.status.Status;
 import cn.geekcity.xiot.xcp.stanza.Stanza;
 import cn.geekcity.xiot.xcp.stanza.codec.vertx.impl.StanzaCodec;
@@ -12,13 +14,23 @@ import cn.geekcity.xiot.xcp.stanza.iq.IQ;
 import cn.geekcity.xiot.xcp.stanza.iq.IQError;
 import cn.geekcity.xiot.xcp.stanza.iq.IQQuery;
 import cn.geekcity.xiot.xcp.stanza.iq.IQResult;
+import cn.geekcity.xiot.xcp.stanza.iq.basic.Byebye;
+import cn.geekcity.xiot.xcp.stanza.iq.basic.Ping;
 import cn.geekcity.xiot.xcp.stanza.iq.device.control.GetProperties;
 import cn.geekcity.xiot.xcp.stanza.iq.device.control.InvokeActions;
 import cn.geekcity.xiot.xcp.stanza.iq.device.control.SetProperties;
+import cn.geekcity.xiot.xcp.stanza.iq.device.key.GetAccessKey;
+import cn.geekcity.xiot.xcp.stanza.iq.device.key.SetAccessKey;
+import cn.geekcity.xiot.xcp.stanza.iq.device.notify.EventOccurred;
+import cn.geekcity.xiot.xcp.stanza.iq.device.notify.PropertiesChanged;
+import cn.geekcity.xiot.xcp.stanza.iq.owner.manager.AddOwner;
+import cn.geekcity.xiot.xcp.stanza.iq.owner.manager.GetOwners;
+import cn.geekcity.xiot.xcp.stanza.iq.owner.manager.RemoveOwner;
 import cn.geekcity.xiot.xcp.stanza.message.Message;
 import io.vertx.core.*;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
+import jakarta.inject.Inject;
 import jakarta.websocket.Session;
 import org.jboss.logging.Logger;
 
@@ -28,8 +40,10 @@ import java.util.stream.Collectors;
 
 public class XcpDeviceEndpoint {
 
-    private static final Logger logger = Logger.getLogger(XcpDeviceEndpoint.class);
+    @Inject
+    XcpDeviceEndpointHandler handler;
 
+    private static final Logger logger = Logger.getLogger(XcpDeviceEndpoint.class);
     private static final int DEFAULT_QUERY_TIMEOUT_MS = 3 * 1000;
 
     private final Vertx vertx;
@@ -50,6 +64,16 @@ public class XcpDeviceEndpoint {
         this.codec = codec;
 
         this.session.setMaxIdleTimeout(60_000);
+
+        this.addQueryHandler(Ping.METHOD, this::onPing);
+        this.addQueryHandler(GetAccessKey.METHOD, this::onGetAccessKey);
+        this.addQueryHandler(SetAccessKey.METHOD, this::onSetAccessKey);
+        this.addQueryHandler(AddOwner.METHOD, this::onAddOwner);
+        this.addQueryHandler(RemoveOwner.METHOD, this::onRemoveOwner);
+        this.addQueryHandler(GetOwners.METHOD, this::onGetOwners);
+        this.addQueryHandler(PropertiesChanged.METHOD, this::onPropertiesChanged);
+        this.addQueryHandler(EventOccurred.METHOD, this::onEventOccurred);
+        this.addQueryHandler(Byebye.METHOD, this::onBye);
     }
 
     public String replicaIp() {
@@ -112,7 +136,7 @@ public class XcpDeviceEndpoint {
      * @param properties the properties to be got
      * @return  a result for execute
      */
-    Future<List<PropertyOperation>> getProperties(String stanzaId, List<PropertyOperation> properties) {
+    public Future<List<PropertyOperation>> getProperties(String stanzaId, List<PropertyOperation> properties) {
         Promise<List<PropertyOperation>> promise = Promise.promise();
 
         root.tryRead(properties);
@@ -162,7 +186,7 @@ public class XcpDeviceEndpoint {
      * @param properties the properties to be set
      * @return  a result for execute
      */
-    Future<List<PropertyOperation>> setProperties(String stanzaId, List<PropertyOperation> properties) {
+    public Future<List<PropertyOperation>> setProperties(String stanzaId, List<PropertyOperation> properties) {
         Promise<List<PropertyOperation>> promise = Promise.promise();
 
         root.tryWrite(properties, false);
@@ -211,7 +235,7 @@ public class XcpDeviceEndpoint {
      * @param actions the actions to be invocation
      * @return  a result for execute
      */
-    Future<List<ActionOperation>> invokeActions(String stanzaId, List<ActionOperation> actions) {
+    public Future<List<ActionOperation>> invokeActions(String stanzaId, List<ActionOperation> actions) {
         Promise<List<ActionOperation>> promise = Promise.promise();
 
         root.tryInvoke(actions);
@@ -261,7 +285,7 @@ public class XcpDeviceEndpoint {
      * @param property the property to be got
      * @return  a result for execute
      */
-    Future<PropertyOperation> getProperty(String stanzaId, PropertyOperation property) {
+    public Future<PropertyOperation> getProperty(String stanzaId, PropertyOperation property) {
         return getProperties(stanzaId, Collections.singletonList(property)).map(List::getFirst);
     }
 
@@ -271,7 +295,7 @@ public class XcpDeviceEndpoint {
      * @param property the property to be set
      * @return  a result for execute
      */
-    Future<PropertyOperation> setProperty(String stanzaId, PropertyOperation property) {
+    public Future<PropertyOperation> setProperty(String stanzaId, PropertyOperation property) {
         return setProperties(stanzaId, Collections.singletonList(property)).map(List::getFirst);
     }
 
@@ -281,7 +305,7 @@ public class XcpDeviceEndpoint {
      * @param action the action to be invocation
      * @return  a result for execute
      */
-    Future<ActionOperation> invokeAction(String stanzaId, ActionOperation action) {
+    public Future<ActionOperation> invokeAction(String stanzaId, ActionOperation action) {
         return invokeActions(stanzaId, Collections.singletonList(action)).map(List::getFirst);
     }
 
@@ -367,5 +391,97 @@ public class XcpDeviceEndpoint {
         } else {
             logger.info("Message Handler not found: " + message.topic());
         }
+    }
+
+    private void onGetAccessKey(IQQuery query) {
+        GetAccessKey.Query q = (GetAccessKey.Query)query;
+
+        try {
+            String value = handler.getAccessKey(root.did());
+            this.write(q.result(value));
+        } catch (IotError e) {
+            this.write(q.error(e.status(), e.description()));
+        }
+    }
+
+    private void onSetAccessKey(IQQuery query) {
+        SetAccessKey.Query q = (SetAccessKey.Query)query;
+
+        if (q.key().length() < Constant.ACCESS_KEY_MIN_LENGTH) {
+            this.write(q.error(Status.ACCESS_KEY_INVALID, "access-key too short"));
+            return;
+        }
+
+        handler.setAccessKey(root.did(), q.key());
+
+        this.write(q.result());
+
+        handler.onAccessKeyChanged(this, root.did(), q.key(), q.id());
+    }
+
+    private void onGetOwners(IQQuery query) {
+        GetOwners.Query q = (GetOwners.Query)query;
+
+        List<DeviceOwner> owners = handler.getOwners(this.root.did());
+        this.write(q.result(owners));
+    }
+
+    private void onAddOwner(IQQuery query) {
+        AddOwner.Query q = (AddOwner.Query)query;
+
+        try {
+            handler.addOwner(this.root.did(), q.owner());
+            this.write(q.result());
+        } catch (IotError e) {
+            this.write(q.error(e.status(), e.description()));
+        }
+    }
+
+    private void onRemoveOwner(IQQuery query) {
+        RemoveOwner.Query q = (RemoveOwner.Query)query;
+
+        handler.removeOwner(this.root.did(), q.owner());
+        this.write(q.result());
+    }
+
+    private void onPropertiesChanged(IQQuery query) {
+        logger.info("onPropertiesChanged: " + query.id());
+
+        PropertiesChanged.Query q = (PropertiesChanged.Query) query;
+
+        root.onPropertiesChanged(q.properties());
+
+        List<PropertyOperation> list = q.properties().stream().filter(p -> p.status() == 0).collect(Collectors.toList());
+        if (!list.isEmpty()) {
+            handler.onPropertiesChanged(this, list, q.id());
+        }
+
+        this.write(q.result(q.properties()));
+    }
+
+    private void onEventOccurred(IQQuery query) {
+        logger.info("onEventOccurred: " + query.id());
+
+        EventOccurred.Query q = (EventOccurred.Query)query;
+
+        root.tryEventOccurred(q.event());
+
+        if (q.event().isNotError()) {
+            handler.onEventOccurred(this, q.event(), q.id());
+            this.write(q.result());
+        } else {
+            this.write(q.error(q.event().status(), q.event().description()));
+        }
+    }
+
+    private void onBye(IQQuery query) {
+        logger.info("onBye: " + query.id());
+
+        handler.onInactive(this);
+    }
+
+    private void onPing(IQQuery query) {
+        Ping.Query q = (Ping.Query) query;
+        send(q.result());
     }
 }

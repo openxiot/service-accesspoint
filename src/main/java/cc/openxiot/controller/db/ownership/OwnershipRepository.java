@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @ApplicationScoped
-public class OwnershipRepository implements PanacheMongoRepositoryBase<Ownership, OwnershipKey> {
+public class OwnershipRepository implements PanacheMongoRepositoryBase<Ownership, OwnershipId> {
 
     public void add(Ownership ownership) {
         ensureKey(ownership);
@@ -20,8 +20,12 @@ public class OwnershipRepository implements PanacheMongoRepositoryBase<Ownership
         persist(ownerships);
     }
 
+    public void remove(OwnershipId id) {
+        deleteById(id);
+    }
+
     public void remove(List<Ownership> ownerships) {
-        List<OwnershipKey> ids = ownerships.stream()
+        List<OwnershipId> ids = ownerships.stream()
                 .map(o -> o.id)
                 .collect(Collectors.toList());
         delete("_id in ?1", ids);
@@ -40,7 +44,7 @@ public class OwnershipRepository implements PanacheMongoRepositoryBase<Ownership
     }
 
     public Ownership get(String did, String appId, String ownerId) {
-        return findById(new OwnershipKey(did, appId, ownerId));
+        return findById(new OwnershipId(did, appId, ownerId));
     }
 
     public List<Ownership> get(String appId, String ownerId, List<String> deviceIds) {
@@ -57,7 +61,7 @@ public class OwnershipRepository implements PanacheMongoRepositoryBase<Ownership
 
     private void ensureKey(Ownership o) {
         if (o.id == null) {
-            o.id = new OwnershipKey(o.did, o.appId, o.ownerId);
+            o.id = new OwnershipId(o.did, o.appId, o.ownerId);
         }
     }
 }
