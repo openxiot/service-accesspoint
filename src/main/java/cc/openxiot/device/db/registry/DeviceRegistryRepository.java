@@ -1,5 +1,6 @@
 package cc.openxiot.device.db.registry;
 
+import cn.geekcity.xiot.spec.summary.Summary;
 import io.quarkus.mongodb.panache.PanacheMongoRepositoryBase;
 import jakarta.enterprise.context.ApplicationScoped;
 
@@ -56,7 +57,23 @@ public class DeviceRegistryRepository implements PanacheMongoRepositoryBase<Devi
     }
 
     public void update(Collection<DeviceRegistry> devices) {
+        if (devices.isEmpty()) {
+            return;
+        }
+
         persistOrUpdate(devices);
+    }
+
+    public void updateOneWithoutAccessKey(String did, Summary summary) {
+        DeviceRegistry entity = findById(did);
+        if (entity != null) {
+            entity.type = summary.type().toString();
+            entity.parentId = summary.parentId();
+            entity.online = summary.online();
+            entity.protocol = summary.protocol();
+            entity.members = summary.members();
+            update(entity);
+        }
     }
 
     public void updateAccessKey(String did, String key) {
@@ -80,6 +97,10 @@ public class DeviceRegistryRepository implements PanacheMongoRepositoryBase<Devi
     }
 
     public List<DeviceRegistry> get(List<String> dids) {
+        if (dids.isEmpty()) {
+            return List.of();
+        }
+
         return list("did in ?1", dids);
     }
 

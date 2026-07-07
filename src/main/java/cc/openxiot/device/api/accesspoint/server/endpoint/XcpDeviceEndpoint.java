@@ -1,6 +1,8 @@
 package cc.openxiot.device.api.accesspoint.server.endpoint;
 
+import cc.openxiot.device.api.accesspoint.server.endpoint.factory.XcpDeviceFactory;
 import cn.geekcity.xiot.spec.constant.Constant;
+import cn.geekcity.xiot.spec.device.Device;
 import cn.geekcity.xiot.spec.error.IotError;
 import cn.geekcity.xiot.spec.image.DeviceImage;
 import cn.geekcity.xiot.spec.notice.Notice;
@@ -21,6 +23,7 @@ import cn.geekcity.xiot.xcp.stanza.iq.device.control.InvokeActions;
 import cn.geekcity.xiot.xcp.stanza.iq.device.control.SetProperties;
 import cn.geekcity.xiot.xcp.stanza.iq.device.key.GetAccessKey;
 import cn.geekcity.xiot.xcp.stanza.iq.device.key.SetAccessKey;
+import cn.geekcity.xiot.xcp.stanza.iq.device.manager.GetChildren;
 import cn.geekcity.xiot.xcp.stanza.iq.device.notify.EventOccurred;
 import cn.geekcity.xiot.xcp.stanza.iq.device.notify.PropertiesChanged;
 import cn.geekcity.xiot.xcp.stanza.iq.owner.manager.AddOwner;
@@ -43,6 +46,9 @@ public class XcpDeviceEndpoint {
     @Inject
     XcpDeviceEndpointHandler handler;
 
+    @Inject
+    XcpDeviceFactory factory;
+
     private static final Logger logger = Logger.getLogger(XcpDeviceEndpoint.class);
     private static final int DEFAULT_QUERY_TIMEOUT_MS = 3_000;
     private static final int DEFAULT_MAX_IDLE_TIMEOUT_MS = 30_000;
@@ -52,6 +58,8 @@ public class XcpDeviceEndpoint {
     private final Session session;
     private final StanzaCodec codec;
     private final DeviceImage root;
+    private final String id;
+    private long stanzaId = 1;
 
     private final Map<String, Handler<IQQuery>> queryHandlers = new HashMap<>();
     private final Map<String, XcpResultHandler> resultHandlers = new HashMap<>();
@@ -59,6 +67,7 @@ public class XcpDeviceEndpoint {
 
     public XcpDeviceEndpoint(Vertx vertx, String ip, Session session, DeviceImage image, StanzaCodec codec) {
         this.vertx = vertx;
+        this.id = generateId();
         this.replicaIp = ip;
         this.session = session;
         this.root = image;
@@ -75,6 +84,11 @@ public class XcpDeviceEndpoint {
         this.addQueryHandler(PropertiesChanged.METHOD, this::onPropertiesChanged);
         this.addQueryHandler(EventOccurred.METHOD, this::onEventOccurred);
         this.addQueryHandler(Byebye.METHOD, this::onBye);
+    }
+
+    public void initialize() {
+        this.getProperties(root);
+        this.getChildren();
     }
 
     public String replicaIp() {
@@ -131,6 +145,66 @@ public class XcpDeviceEndpoint {
         session.getAsyncRemote().sendText(text, result -> {
             if (!result.isOK()) {
                 logger.errorv("Failed to send stanza to {0}: {1}", id(), result.getException().getMessage());
+            }
+        });
+    }
+
+    private void getProperties(DeviceImage device) {
+        String stanzaId = nextStanzaId();
+        List<PropertyOperation> properties = device.getReadablePropertyIDs().stream().map(PropertyOperation::new).collect(Collectors.toList());
+        GetProperties.Query query = new GetProperties.Query(stanzaId, properties);
+
+        this.send(query, ar -> {
+            List<PropertyOperation> results = new ArrayList<>();
+
+            if (ar.succeeded()) {
+                logger.info("getProperties succeeded: " + device.did());
+                results = ((GetProperties.Result) ar.result()).properties();
+            } else {
+                logger.info("getProperties failed: " + device.did() + ", cause: " + ar.cause());
+
+                Throwable t = ar.cause();
+                if (t instanceof IotError e) {
+                    for (PropertyOperation p : query.properties()) {
+                        p.status(e.status()).description(e.description());
+                        results.add(p);
+                    }
+                } else {
+                    for (PropertyOperation p : query.properties()) {
+                        p.status(Status.INTERNAL_ERROR).description(t.getMessage());
+                        results.add(p);
+                    }
+                }
+            }
+
+            handler.onPropertiesChanged(this, results, stanzaId);
+        });
+    }
+
+    private void getChildren() {
+        String stanzaId = nextStanzaId();
+        GetChildren.Query query = new GetChildren.Query(stanzaId, root.did());
+
+        this.send(query, ar -> {
+            if (ar.succeeded()) {
+                if (ar.result() instanceof GetChildren.Result) {
+                    List<Device> children = ((GetChildren.Result) ar.result()).children();
+
+                    // factory.newInstances(children);
+                    // todo: 读属性
+                } else if (ar.result() instanceof IQError error) {
+                    logger.infov("getChildren error: {0} {1}", error.status(), error.description());
+                } else {
+                    logger.info("getChildren error, invalid result: " + ar.result().getClass().getSimpleName());
+                }
+            } else {
+                Throwable e = ar.cause();
+
+                if (e instanceof IotError error) {
+                    logger.infov("getChildren failed: {0}, {1}", error.status(), error.description());
+                } else {
+                    logger.info("getChildren failed: " + e);
+                }
             }
         });
     }
@@ -490,5 +564,14 @@ public class XcpDeviceEndpoint {
     private void onPing(IQQuery query) {
         Ping.Query q = (Ping.Query) query;
         send(q.result());
+    }
+
+    private String generateId() {
+        String[] fields = UUID.randomUUID().toString().split("-");
+        return fields[fields.length - 1];
+    }
+
+    private String nextStanzaId() {
+        return this.id + "#" + stanzaId++;
     }
 }

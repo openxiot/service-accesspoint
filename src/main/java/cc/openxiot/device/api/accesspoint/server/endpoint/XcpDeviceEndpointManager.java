@@ -69,6 +69,8 @@ public class XcpDeviceEndpointManager {
             }
         }
 
+        endpoint.initialize();
+
         return true;
     }
 

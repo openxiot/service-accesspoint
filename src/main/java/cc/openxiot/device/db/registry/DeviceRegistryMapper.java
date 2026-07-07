@@ -5,8 +5,13 @@ import cn.geekcity.xiot.spec.image.DeviceImage;
 import cn.geekcity.xiot.spec.summary.Summary;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public class DeviceRegistryMapper {
+
+    public static List<DeviceRegistry> toEntities(List<DeviceImage> children, String accessPoint) {
+        return children.stream().map(x -> toEntity(x, accessPoint)).toList();
+    }
 
     public static DeviceRegistry toEntity(DeviceImage image, String accessPoint) {
         return toEntity(image.did(), image.summary(), accessPoint);
