@@ -68,7 +68,7 @@ public class XcpDeviceEndpointHandler {
         onSummaryChanged(endpoint, endpoint.root().did(), endpoint.root().summary().online(false), "active");
     }
 
-    public void onChildrenActive(XcpDeviceEndpoint endpoint, List<DeviceImage> children, String id) {
+    public void onChildrenActive(XcpDeviceEndpoint endpoint, List<DeviceImage> children) {
         DeviceRegistry root = registry.get(endpoint.root().did());
         List<DeviceRegistry> lastChildren = registry.getChildren(endpoint.root().did());
         Map<String, DeviceRegistry> registered = registry.get(children.stream().map(DeviceImage::did).toList())
@@ -111,12 +111,8 @@ public class XcpDeviceEndpointHandler {
         publishChanged(root.did, changed, children);
     }
 
-    public void onChildrenInactive(XcpDeviceEndpoint endpoint, DeviceImage root, String id) {
-        logger.infov("onChildrenInactive: {0}", id);
-    }
-
-    public void onChildrenAdded(XcpDeviceEndpoint endpoint, List<DeviceImage> children, String id) {
-        logger.infov("onChildrenAdded: {0}", id);
+    public void onChildrenAdded(XcpDeviceEndpoint endpoint, List<DeviceImage> children) {
+        logger.infov("onChildrenAdded");
 
         DeviceRegistry root = registry.get(endpoint.root().did());
 
@@ -133,8 +129,8 @@ public class XcpDeviceEndpointHandler {
         event.publish(childrenAdded);
     }
 
-    public void onChildrenRemoved(XcpDeviceEndpoint endpoint, List<DeviceImage> children, String id) {
-        logger.infov("onChildrenRemoved: {0}", id);
+    public void onChildrenRemoved(XcpDeviceEndpoint endpoint, List<DeviceImage> children) {
+        logger.infov("onChildrenRemoved");
 
         DeviceRegistry root = registry.get(endpoint.root().did());
 
