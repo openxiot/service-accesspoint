@@ -1,4 +1,4 @@
-package cc.openxiot.device.accesspoint;
+package cc.openxiot.device.api.accesspoint.server;
 
 import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.Test;

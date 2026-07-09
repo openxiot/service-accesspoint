@@ -87,6 +87,8 @@ public class XcpDeviceEndpoint {
         this.addQueryHandler(ChildrenAdded.METHOD, this::onChildrenAdded);
         this.addQueryHandler(ChildrenRemoved.METHOD, this::onChildrenRemoved);
         this.addQueryHandler(SummaryChanged.METHOD, this::onSummaryChanged);
+
+        // TODO: 这里加一个逻辑，申请子设备ID，允许网关给子设备申请ID
     }
 
     public void initialize() {
@@ -213,6 +215,8 @@ public class XcpDeviceEndpoint {
     }
 
     private void onChildrenActive(List<Device> children) {
+        // todo: 先过滤掉子设备不合法的情况
+
         List<DeviceImage> list = factory.newInstances(children);
 
         if (list.isEmpty()) {
@@ -543,6 +547,8 @@ public class XcpDeviceEndpoint {
     private void onChildrenAdded(IQQuery query) {
         ChildrenAdded.Query q = (ChildrenAdded.Query) query;
         send(q.result());
+
+        // todo: 先过滤掉子设备不合法的情况
 
         List<DeviceImage> list = factory.newInstances(q.children());
 

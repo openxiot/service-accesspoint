@@ -182,78 +182,78 @@ public class XcpDeviceEndpointManager {
         }
     }
 
-    public Future<List<PropertyOperation>> getProperties(String traceId, List<PropertyOperation> operations) {
-        Promise<List<PropertyOperation>> promise = Promise.promise();
+//    public Future<List<PropertyOperation>> getProperties(String traceId, List<PropertyOperation> operations) {
+//        Promise<List<PropertyOperation>> promise = Promise.promise();
+//
+//        Map<String, List<PropertyOperation>> x = new HashMap<>();
+//        for (PropertyOperation property : operations) {
+//            List<PropertyOperation> properties = x.computeIfAbsent(property.did(), k -> new ArrayList<>());
+//            properties.add(property);
+//        }
+//
+//        List<Future<List<PropertyOperation>>> futures = new ArrayList<>();
+//        x.forEach((did, properties) -> futures.add(getProperties(did, properties, traceId)));
+//
+//        FutureMerger.mergeList(futures)
+//                .onComplete(ar -> {
+//                    if (ar.succeeded()) {
+//                        promise.complete(ar.result());
+//                    } else {
+//                        promise.fail(ar.cause());
+//                    }
+//                });
+//
+//        return promise.future();
+//    }
 
-        Map<String, List<PropertyOperation>> x = new HashMap<>();
-        for (PropertyOperation property : operations) {
-            List<PropertyOperation> properties = x.computeIfAbsent(property.did(), k -> new ArrayList<>());
-            properties.add(property);
-        }
+//    public Future<List<PropertyOperation>> setProperties(String traceId, List<PropertyOperation> operations) {
+//        Promise<List<PropertyOperation>> promise = Promise.promise();
+//
+//        Map<String, List<PropertyOperation>> x = new HashMap<>();
+//
+//        for (PropertyOperation property : operations) {
+//            List<PropertyOperation> properties = x.computeIfAbsent(property.did(), k -> new ArrayList<>());
+//            properties.add(property);
+//        }
+//
+//        List<Future<List<PropertyOperation>>> futures = new ArrayList<>();
+//        x.forEach((did, properties) -> futures.add(setProperties(did, properties, traceId)));
+//
+//        FutureMerger.mergeList(futures)
+//                .onComplete(ar -> {
+//                    if (ar.succeeded()) {
+//                        promise.complete(ar.result());
+//                    } else {
+//                        promise.fail(ar.cause());
+//                    }
+//                });
+//
+//        return promise.future();
+//    }
 
-        List<Future<List<PropertyOperation>>> futures = new ArrayList<>();
-        x.forEach((did, properties) -> futures.add(getProperties(did, properties, traceId)));
-
-        FutureMerger.mergeList(futures)
-                .onComplete(ar -> {
-                    if (ar.succeeded()) {
-                        promise.complete(ar.result());
-                    } else {
-                        promise.fail(ar.cause());
-                    }
-                });
-
-        return promise.future();
-    }
-
-    public Future<List<PropertyOperation>> setProperties(String traceId, List<PropertyOperation> operations) {
-        Promise<List<PropertyOperation>> promise = Promise.promise();
-
-        Map<String, List<PropertyOperation>> x = new HashMap<>();
-
-        for (PropertyOperation property : operations) {
-            List<PropertyOperation> properties = x.computeIfAbsent(property.did(), k -> new ArrayList<>());
-            properties.add(property);
-        }
-
-        List<Future<List<PropertyOperation>>> futures = new ArrayList<>();
-        x.forEach((did, properties) -> futures.add(setProperties(did, properties, traceId)));
-
-        FutureMerger.mergeList(futures)
-                .onComplete(ar -> {
-                    if (ar.succeeded()) {
-                        promise.complete(ar.result());
-                    } else {
-                        promise.fail(ar.cause());
-                    }
-                });
-
-        return promise.future();
-    }
-
-    public Future<List<ActionOperation>> invokeActions(String traceId, List<ActionOperation> operations) {
-        Promise<List<ActionOperation>> promise = Promise.promise();
-
-        Map<String, List<ActionOperation>> x = new HashMap<>();
-        for (ActionOperation action : operations) {
-            List<ActionOperation> actions = x.computeIfAbsent(action.did(), k -> new ArrayList<>());
-            actions.add(action);
-        }
-
-        List<Future<List<ActionOperation>>> futures = new ArrayList<>();
-        x.forEach((did, actions) -> futures.add(invokeActions(did, actions, traceId)));
-
-        FutureMerger.mergeList(futures)
-                .onComplete(ar -> {
-                    if (ar.succeeded()) {
-                        promise.complete(ar.result());
-                    } else {
-                        promise.fail(ar.cause());
-                    }
-                });
-
-        return promise.future();
-    }
+//    public Future<List<ActionOperation>> invokeActions(String traceId, List<ActionOperation> operations) {
+//        Promise<List<ActionOperation>> promise = Promise.promise();
+//
+//        Map<String, List<ActionOperation>> x = new HashMap<>();
+//        for (ActionOperation action : operations) {
+//            List<ActionOperation> actions = x.computeIfAbsent(action.did(), k -> new ArrayList<>());
+//            actions.add(action);
+//        }
+//
+//        List<Future<List<ActionOperation>>> futures = new ArrayList<>();
+//        x.forEach((did, actions) -> futures.add(invokeActions(did, actions, traceId)));
+//
+//        FutureMerger.mergeList(futures)
+//                .onComplete(ar -> {
+//                    if (ar.succeeded()) {
+//                        promise.complete(ar.result());
+//                    } else {
+//                        promise.fail(ar.cause());
+//                    }
+//                });
+//
+//        return promise.future();
+//    }
 
     public Future<IQ> getProperty(GetProperty.Query query) {
         return getProperty(query.property(), query.id()).map(query::result);
@@ -267,7 +267,7 @@ public class XcpDeviceEndpointManager {
         return invokeAction(query.action(), query.id()).map(query::result);
     }
 
-    private Future<List<PropertyOperation>> getProperties(String did, List<PropertyOperation> properties, String stanzaId) {
+    public Future<List<PropertyOperation>> getProperties(String did, List<PropertyOperation> properties, String stanzaId) {
         Promise<List<PropertyOperation>> promise = Promise.promise();
 
         String endpointId = devices.get(did);
@@ -307,7 +307,7 @@ public class XcpDeviceEndpointManager {
         return promise.future();
     }
 
-    private Future<List<PropertyOperation>> setProperties(String did, List<PropertyOperation> properties, String stanzaId) {
+    public Future<List<PropertyOperation>> setProperties(String did, List<PropertyOperation> properties, String stanzaId) {
         Promise<List<PropertyOperation>> promise = Promise.promise();
 
         String endpointId = devices.get(did);
@@ -341,7 +341,7 @@ public class XcpDeviceEndpointManager {
         return promise.future();
     }
 
-    private Future<List<ActionOperation>> invokeActions(String did, List<ActionOperation> actions, String stanzaId) {
+    public Future<List<ActionOperation>> invokeActions(String did, List<ActionOperation> actions, String stanzaId) {
         Promise<List<ActionOperation>> promise = Promise.promise();
 
         String endpointId = devices.get(did);

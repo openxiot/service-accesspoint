@@ -33,7 +33,7 @@ import java.util.stream.Collectors;
 @Produces(MediaType.APPLICATION_JSON)
 @Tag(name = "Private API", description = "Private API (internal network only)")
 @RequestScoped
-public class XcpDeviceServerResource {
+public class AccesspointResource {
 
     @Inject
     Logger logger;
@@ -71,44 +71,56 @@ public class XcpDeviceServerResource {
     }
 
     @GET
-    @Path("/properties")
-    public CompletionStage<Response> getProperties(@Context HttpHeaders headers, @QueryParam("pid") List<String> pid) {
+    @Path("/properties/{did}")
+    public CompletionStage<Response> getProperties(
+            @Context HttpHeaders headers,
+            @PathParam("did") String did,
+            @QueryParam("pid") List<String> pid
+    ) {
         String traceId = resolveTraceId(headers);
         if (pid == null || pid.isEmpty()) {
             return CompletableFuture.completedFuture(OxResponse.error("pid is required"));
         }
         List<PropertyOperation> properties = pid.stream().map(PropertyOperation::new).toList();
-        return manager.getProperties(traceId, properties)
+        return manager.getProperties(did, properties, traceId)
                 .map(list -> OxResponse.ok(PropertyOperationCodec.Get.RESULT.encode(list)))
                 .otherwise(e -> OxResponse.error(e.getMessage()))
                 .toCompletionStage();
     }
 
     @POST
-    @Path("/properties")
+    @Path("/properties/{did}")
     @Consumes(MediaType.APPLICATION_JSON)
-    public CompletionStage<Response> setProperties(@Context HttpHeaders headers, String body) {
+    public CompletionStage<Response> setProperties(
+            @Context HttpHeaders headers,
+            @PathParam("did") String did,
+            String body
+    ) {
         String traceId = resolveTraceId(headers);
         JsonArray array = new JsonArray(body);
         List<PropertyOperation> properties = array.stream()
                 .map(PropertyOperationCodec.Set.QUERY::decode)
                 .collect(Collectors.toList());
-        return manager.setProperties(traceId, properties)
+        return manager.setProperties(did, properties, traceId)
                 .map(list -> OxResponse.ok(PropertyOperationCodec.Set.RESULT.encode(list)))
                 .otherwise(e -> OxResponse.error(e.getMessage()))
                 .toCompletionStage();
     }
 
     @POST
-    @Path("/actions")
+    @Path("/actions/{did}")
     @Consumes(MediaType.APPLICATION_JSON)
-    public CompletionStage<Response> invokeActions(@Context HttpHeaders headers, String body) {
+    public CompletionStage<Response> invokeActions(
+            @Context HttpHeaders headers,
+            @PathParam("did") String did,
+            String body
+    ) {
         String traceId = resolveTraceId(headers);
         JsonArray array = new JsonArray(body);
         List<ActionOperation> actions = array.stream()
                 .map(ActionOperationCodec.QUERY::decode)
                 .collect(Collectors.toList());
-        return manager.invokeActions(traceId, actions)
+        return manager.invokeActions(did, actions, traceId)
                 .map(list -> OxResponse.ok(ActionOperationCodec.RESULT.encode(list)))
                 .otherwise(e -> OxResponse.error(e.getMessage()))
                 .toCompletionStage();
