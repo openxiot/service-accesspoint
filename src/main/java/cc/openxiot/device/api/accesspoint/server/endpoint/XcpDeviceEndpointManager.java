@@ -1,7 +1,7 @@
 package cc.openxiot.device.api.accesspoint.server.endpoint;
 
 import cc.openxiot.device.api.accesspoint.server.endpoint.console.ConsoleService;
-import cc.openxiot.device.api.accesspoint.server.endpoint.factory.ProductService;
+import cc.openxiot.device.api.accesspoint.server.endpoint.product.ProductService;
 import cn.geekcity.xiot.spec.device.Device;
 import cn.geekcity.xiot.spec.error.IotError;
 import cn.geekcity.xiot.spec.image.DeviceImage;

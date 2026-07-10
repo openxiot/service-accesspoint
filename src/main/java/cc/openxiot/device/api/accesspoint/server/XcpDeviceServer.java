@@ -4,7 +4,7 @@ import cc.openxiot.device.api.accesspoint.server.configurator.XcpCertConfigurato
 import cc.openxiot.device.api.accesspoint.server.limiter.RateLimiter;
 import cc.openxiot.device.api.accesspoint.server.endpoint.XcpDeviceEndpoint;
 import cc.openxiot.device.api.accesspoint.server.endpoint.XcpDeviceEndpointManager;
-import cc.openxiot.device.api.accesspoint.server.endpoint.factory.ProductService;
+import cc.openxiot.device.api.accesspoint.server.endpoint.product.ProductService;
 import cc.openxiot.device.api.accesspoint.replica.ReplicaService;
 import cn.geekcity.xiot.spec.summary.Summary;
 import cn.geekcity.xiot.xcp.stanza.codec.vertx.impl.StanzaCodec;

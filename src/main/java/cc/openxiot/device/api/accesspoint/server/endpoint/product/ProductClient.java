@@ -1,4 +1,4 @@
-package cc.openxiot.device.api.accesspoint.server.endpoint.factory;
+package cc.openxiot.device.api.accesspoint.server.endpoint.product;
 
 import io.smallrye.mutiny.Uni;
 import jakarta.ws.rs.*;
