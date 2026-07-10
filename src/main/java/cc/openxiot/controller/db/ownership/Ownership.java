@@ -1,7 +1,5 @@
 package cc.openxiot.controller.db.ownership;
 
-import io.quarkus.mongodb.panache.PanacheMongoEntityBase;
-import io.quarkus.mongodb.panache.common.MongoEntity;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import org.bson.codecs.pojo.annotations.BsonDiscriminator;
 import org.bson.codecs.pojo.annotations.BsonId;
@@ -9,11 +7,10 @@ import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 import java.util.Date;
 
-@MongoEntity(collection = "ownership")
 @BsonDiscriminator
 @RegisterForReflection
 @Schema(description = "从属关系")
-public class Ownership extends PanacheMongoEntityBase {
+public class Ownership {
 
     @BsonId
     @Schema(description = "复合主键", required = true)

@@ -1,8 +1,6 @@
 package cc.openxiot.device.db.registry;
 
 import cn.geekcity.xiot.spec.summary.Summary;
-import io.quarkus.mongodb.panache.PanacheMongoEntityBase;
-import io.quarkus.mongodb.panache.common.MongoEntity;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import org.bson.codecs.pojo.annotations.BsonDiscriminator;
 import org.bson.codecs.pojo.annotations.BsonId;
@@ -11,11 +9,10 @@ import org.eclipse.microprofile.openapi.annotations.media.Schema;
 import java.util.Date;
 import java.util.List;
 
-@MongoEntity(collection = "registry")
 @BsonDiscriminator
 @RegisterForReflection
 @Schema(description = "设备注册表")
-public class DeviceRegistry extends PanacheMongoEntityBase {
+public class DeviceRegistry {
 
     @BsonId
     @Schema(description = "设备ID", required = true)

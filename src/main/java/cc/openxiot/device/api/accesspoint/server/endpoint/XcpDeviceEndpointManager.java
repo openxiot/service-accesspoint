@@ -12,8 +12,8 @@ import cn.geekcity.xiot.xcp.stanza.iq.IQ;
 import cn.geekcity.xiot.xcp.stanza.iq.device.control.*;
 import cn.geekcity.xiot.xcp.stanza.message.Message;
 import cc.openxiot.device.api.accesspoint.server.endpoint.detector.DetectorService;
-import cc.openxiot.device.db.registry.DeviceRegistry;
 import cc.openxiot.device.db.registry.DeviceRegistryRepository;
+import io.smallrye.mutiny.Uni;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
@@ -44,33 +44,32 @@ public class XcpDeviceEndpointManager {
     private final ConcurrentHashMap<String, XcpDeviceEndpoint> endpoints = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, String> devices = new ConcurrentHashMap<>();
 
-    public boolean add(XcpDeviceEndpoint endpoint) {
-        if (isOnline(endpoint.root().did())) {
-            logger.infov("device already online: {0}", endpoint.root().did());
-            return false;
-        }
+    public Uni<Boolean> add(XcpDeviceEndpoint endpoint) {
+        return isOnline(endpoint.root().did())
+                .chain(online -> {
+                    if (online) {
+                        logger.infov("device already online: {0}", endpoint.root().did());
+                        return Uni.createFrom().item(false);
+                    }
 
-        endpoints.put(endpoint.id(), endpoint);
+                    endpoints.put(endpoint.id(), endpoint);
+                    save(endpoint.root(), endpoint.id());
+                    endpoint.root().summary().lastOnline(new Date());
 
-        save(endpoint.root(), endpoint.id());
-
-        // 修正根设备的在线时间。
-        endpoint.root().summary().lastOnline(new Date());
-
-        handler.onActive(endpoint);
-
-        // Guard: 如果 session 已关闭（onClose 在 add 完成前触发），立即清理
-        if (!endpoint.session().isOpen()) {
-            XcpDeviceEndpoint removed = endpoints.remove(endpoint.id());
-            if (removed != null) {
-                removeDeviceTree(removed.root());
-                handler.onInactive(removed);
-            }
-        }
-
-        endpoint.initialize();
-
-        return true;
+                    return handler.onActive(endpoint)
+                            .chain(v -> {
+                                if (!endpoint.session().isOpen()) {
+                                    XcpDeviceEndpoint removed = endpoints.remove(endpoint.id());
+                                    if (removed != null) {
+                                        removeDeviceTree(removed.root());
+                                        handler.onInactive(removed).subscribe().with(x -> {
+                                        });
+                                    }
+                                }
+                                endpoint.initialize();
+                                return Uni.createFrom().item(true);
+                            });
+                });
     }
 
     private void save(DeviceImage device, String endpointId) {
@@ -87,7 +86,8 @@ public class XcpDeviceEndpointManager {
         XcpDeviceEndpoint endpoint = endpoints.remove(id);
         if (endpoint != null) {
             removeDeviceTree(endpoint.root());
-            handler.onInactive(endpoint);
+            handler.onInactive(endpoint).subscribe().with(v -> {
+            });
             return true;
         }
         return false;
@@ -105,23 +105,23 @@ public class XcpDeviceEndpointManager {
      * <p>先查本地 devices 内存表，命中则一定在本实例在线；
      * 不命中则查 DB，DB 说在线则探测原接入点确认是否真在线（防僵尸）。</p>
      */
-    public boolean isOnline(String did) {
+    public Uni<Boolean> isOnline(String did) {
         if (devices.containsKey(did)) {
-            return true;
+            return Uni.createFrom().item(true);
         }
 
-        DeviceRegistry device = registry.get(did);
-        if (device == null || !device.online) {
-            return false;
-        }
-
-        // DB 说在线，但不在本实例 → 探测原接入点确认
-        boolean online = detector.probe(did, device.accessPoint);
-        if (!online) {
-            logger.warnv("device is zombie (DB online but probe failed), did={0}, accessPoint={1}", did, device.accessPoint);
-        }
-
-        return online;
+        return registry.get(did)
+                .chain(device -> {
+                    if (device == null || !device.online) {
+                        return Uni.createFrom().item(false);
+                    }
+                    return detector.probe(did, device.accessPoint)
+                            .onItem().invoke(online -> {
+                                if (!online) {
+                                    logger.warnv("device is zombie (DB online but probe failed), did={0}, accessPoint={1}", did, device.accessPoint);
+                                }
+                            });
+                });
     }
 
     public XcpDeviceEndpoint getEndpoint(String did) {

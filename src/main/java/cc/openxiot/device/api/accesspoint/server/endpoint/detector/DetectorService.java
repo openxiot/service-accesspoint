@@ -1,5 +1,6 @@
 package cc.openxiot.device.api.accesspoint.server.endpoint.detector;
 
+import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.eclipse.microprofile.rest.client.RestClientBuilder;
@@ -14,10 +15,10 @@ public class DetectorService {
     @Inject
     Logger logger;
 
-    public boolean probe(String did, String accessPoint) {
+    public Uni<Boolean> probe(String did, String accessPoint) {
         if (accessPoint == null || accessPoint.isBlank()) {
             logger.warnv("probe skipped: accessPoint is empty, did={0}", did);
-            return false;
+            return Uni.createFrom().item(false);
         }
 
         try {
@@ -27,11 +28,15 @@ public class DetectorService {
                     .readTimeout(2, TimeUnit.SECONDS)
                     .build(DetectorClient.class);
 
-            String response = client.probe(did);
-            return Boolean.parseBoolean(response);
+            return client.probe(did)
+                    .map(Boolean::parseBoolean)
+                    .onFailure().recoverWithItem(e -> {
+                        logger.warnv("probe failed: did={0}, accessPoint={1}, error={2}", did, accessPoint, e.getMessage());
+                        return false;
+                    });
         } catch (Exception e) {
             logger.warnv("probe failed: did={0}, accessPoint={1}, error={2}", did, accessPoint, e.getMessage());
-            return false;
+            return Uni.createFrom().item(false);
         }
     }
 }

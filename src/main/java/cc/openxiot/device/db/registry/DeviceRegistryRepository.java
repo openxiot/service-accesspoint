@@ -1,8 +1,14 @@
 package cc.openxiot.device.db.registry;
 
 import cn.geekcity.xiot.spec.summary.Summary;
-import io.quarkus.mongodb.panache.PanacheMongoRepositoryBase;
+import com.mongodb.client.model.Filters;
+import com.mongodb.client.model.ReplaceOptions;
+import io.quarkus.mongodb.reactive.ReactiveMongoClient;
+import io.quarkus.mongodb.reactive.ReactiveMongoCollection;
+import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import java.util.Collection;
 import java.util.Date;
@@ -12,100 +18,129 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @ApplicationScoped
-public class DeviceRegistryRepository implements PanacheMongoRepositoryBase<DeviceRegistry, String> {
+public class DeviceRegistryRepository {
 
-    public void register(DeviceRegistry device) {
-        prepareRegistration(device, get(device.did));
-        persistOrUpdate(device);
+    @Inject
+    ReactiveMongoClient mongoClient;
+
+    @ConfigProperty(name = "quarkus.mongodb.database", defaultValue = "default")
+    String database;
+
+    private ReactiveMongoCollection<DeviceRegistry> getCollection() {
+        return mongoClient.getDatabase(database).getCollection("registry", DeviceRegistry.class);
     }
 
-    public void register(Collection<DeviceRegistry> devices) {
+    public Uni<Void> register(DeviceRegistry device) {
+        return get(device.did)
+                .chain(existed -> {
+                    prepareRegistration(device, existed);
+                    return upsert(device);
+                });
+    }
+
+    public Uni<Void> register(Collection<DeviceRegistry> devices) {
         if (devices.isEmpty()) {
-            return;
+            return Uni.createFrom().voidItem();
         }
 
-        List<String> list = devices.stream()
-                .map(d -> d.did)
-                .collect(Collectors.toList());
+        List<String> dids = devices.stream().map(d -> d.did).collect(Collectors.toList());
 
-        Map<String, DeviceRegistry> existed = get(list).stream().collect(Collectors.toMap(d -> d.did, d -> d));
-
-        for (DeviceRegistry device : devices) {
-            prepareRegistration(device, existed.get(device.did));
-        }
-
-        persistOrUpdate(devices);
+        return get(dids)
+                .chain(existedList -> {
+                    Map<String, DeviceRegistry> existed = existedList.stream()
+                            .collect(Collectors.toMap(d -> d.did, d -> d));
+                    for (DeviceRegistry device : devices) {
+                        prepareRegistration(device, existed.get(device.did));
+                    }
+                    return upsert(devices);
+                });
     }
 
-    public void update(String did, boolean online) {
-        DeviceRegistry device = get(did);
-        if (device != null) {
-            device.online = online;
-
-            if (online) {
-                device.lastOnline = new Date();
-            } else {
-                device.lastOffline = new Date();
+    public Uni<Void> update(String did, boolean online) {
+        return get(did).chain(device -> {
+            if (device != null) {
+                device.online = online;
+                if (online) {
+                    device.lastOnline = new Date();
+                } else {
+                    device.lastOffline = new Date();
+                }
+                return upsert(device);
             }
-
-            update(device);
-        }
+            return Uni.createFrom().voidItem();
+        });
     }
 
-    public void update(DeviceRegistry device) {
-        persistOrUpdate(device);
+    public Uni<Void> update(DeviceRegistry device) {
+        return upsert(device);
     }
 
-    public void update(Collection<DeviceRegistry> devices) {
+    public Uni<Void> update(Collection<DeviceRegistry> devices) {
         if (devices.isEmpty()) {
-            return;
+            return Uni.createFrom().voidItem();
         }
-
-        persistOrUpdate(devices);
+        return upsert(devices);
     }
 
-    public void updateOneWithoutAccessKey(String did, Summary summary) {
-        DeviceRegistry entity = findById(did);
-        if (entity != null) {
-            entity.type = summary.type().toString();
-            entity.parentId = summary.parentId();
-            entity.online = summary.online();
-            entity.protocol = summary.protocol();
-            entity.members = summary.members();
-            update(entity);
-        }
+    public Uni<Void> updateOneWithoutAccessKey(String did, Summary summary) {
+        return get(did).chain(entity -> {
+            if (entity != null) {
+                entity.type = summary.type().toString();
+                entity.parentId = summary.parentId();
+                entity.online = summary.online();
+                entity.protocol = summary.protocol();
+                entity.members = summary.members();
+                return upsert(entity);
+            }
+            return Uni.createFrom().voidItem();
+        });
     }
 
-    public void updateAccessKey(String did, String key) {
-        DeviceRegistry entity = findById(did);
-        if (entity != null) {
-            entity.accessKey = key;
-            update(entity);
-        }
+    public Uni<Void> updateAccessKey(String did, String key) {
+        return get(did).chain(entity -> {
+            if (entity != null) {
+                entity.accessKey = key;
+                return upsert(entity);
+            }
+            return Uni.createFrom().voidItem();
+        });
     }
 
-    public void updateAccessPoint(String did, String accesspoint) {
-        DeviceRegistry entity = findById(did);
-        if (entity != null) {
-            entity.accessPoint = accesspoint;
-            update(entity);
-        }
+    public Uni<Void> updateAccessPoint(String did, String accesspoint) {
+        return get(did).chain(entity -> {
+            if (entity != null) {
+                entity.accessPoint = accesspoint;
+                return upsert(entity);
+            }
+            return Uni.createFrom().voidItem();
+        });
     }
 
-    public DeviceRegistry get(String did) {
-        return findById(did);
+    public Uni<DeviceRegistry> get(String did) {
+        return getCollection().find(Filters.eq("_id", did)).collect().first();
     }
 
-    public List<DeviceRegistry> get(List<String> dids) {
+    public Uni<List<DeviceRegistry>> get(List<String> dids) {
         if (dids.isEmpty()) {
-            return List.of();
+            return Uni.createFrom().item(List.of());
         }
-
-        return list("did in ?1", dids);
+        return getCollection().find(Filters.in("did", dids)).collect().asList();
     }
 
-    public List<DeviceRegistry> getChildren(String rootId) {
-        return list("rootId", rootId);
+    public Uni<List<DeviceRegistry>> getChildren(String rootId) {
+        return getCollection().find(Filters.eq("rootId", rootId)).collect().asList();
+    }
+
+    private Uni<Void> upsert(DeviceRegistry device) {
+        return getCollection()
+                .replaceOne(Filters.eq("_id", device.did), device, new ReplaceOptions().upsert(true))
+                .replaceWithVoid();
+    }
+
+    private Uni<Void> upsert(Collection<DeviceRegistry> devices) {
+        return Uni.combine().all().unis(
+                devices.stream().map(this::upsert).toList()
+        ).discardItems();
     }
 
     private void prepareRegistration(DeviceRegistry device, DeviceRegistry existed) {

@@ -4,11 +4,11 @@ import cc.openxiot.device.api.accesspoint.server.configurator.XcpCertConfigurato
 import cc.openxiot.device.api.accesspoint.server.limiter.RateLimiter;
 import cc.openxiot.device.api.accesspoint.server.endpoint.XcpDeviceEndpoint;
 import cc.openxiot.device.api.accesspoint.server.endpoint.XcpDeviceEndpointManager;
-import cc.openxiot.device.api.accesspoint.server.endpoint.factory.XcpDeviceFactory;
+import cc.openxiot.device.api.accesspoint.server.endpoint.factory.ProductService;
 import cc.openxiot.device.api.accesspoint.replica.ReplicaService;
-import cn.geekcity.xiot.spec.image.DeviceImage;
 import cn.geekcity.xiot.spec.summary.Summary;
 import cn.geekcity.xiot.xcp.stanza.codec.vertx.impl.StanzaCodec;
+import io.smallrye.mutiny.Uni;
 import io.vertx.core.Vertx;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.websocket.*;
@@ -30,7 +30,7 @@ public class XcpDeviceServer {
     ReplicaService replica;
 
     @Inject
-    XcpDeviceFactory factory;
+    ProductService factory;
 
     @Inject
     XcpDeviceEndpointManager manager;
@@ -66,17 +66,23 @@ public class XcpDeviceServer {
 
         logger.infov("XCP device connected: did={0}, sessionId={1}", did, session.getId());
 
-        DeviceImage image = factory.newInstance(did, new Summary(type, true, "wss", null, did));
-        if (image == null) {
-            logger.warnv("Reject device, type not found from ProductCenter: did={0}, type={1}", did, type);
-            closeSession(session, "device type not found");
-            return;
-        }
-
-        if (! manager.add(new XcpDeviceEndpoint(vertx, replica.getIp(), session, image, codec))) {
-            logger.warnv("Reject device, did already connected: {0}", did);
-            closeSession(session, "device already online");
-        }
+        factory.newInstance(did, new Summary(type, true, "wss", null, did))
+                .chain(image -> {
+                    if (image == null) {
+                        logger.warnv("Reject device, type not found from ProductCenter: did={0}, type={1}", did, type);
+                        closeSession(session, "device type not found");
+                        return Uni.createFrom().item(true); // handled, no re-close needed
+                    }
+                    return manager.add(new XcpDeviceEndpoint(vertx, replica.getIp(), session, image, codec));
+                })
+                .subscribe().with(
+                        added -> {
+                            if (!added) {
+                                closeSession(session, "device already online");
+                            }
+                        },
+                        e -> logger.errorv(e, "Failed to create device instance: did={0}", did)
+                );
     }
 
     /** 是否为真实的证书 DN（而非占位符） */

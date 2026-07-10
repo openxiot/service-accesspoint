@@ -1,7 +1,7 @@
 package cc.openxiot.device.api.accesspoint.server.endpoint;
 
 import cc.openxiot.device.api.accesspoint.server.endpoint.console.ConsoleService;
-import cc.openxiot.device.api.accesspoint.server.endpoint.factory.XcpDeviceFactory;
+import cc.openxiot.device.api.accesspoint.server.endpoint.factory.ProductService;
 import cn.geekcity.xiot.spec.constant.Constant;
 import cn.geekcity.xiot.spec.device.Device;
 import cn.geekcity.xiot.spec.error.IotError;
@@ -9,7 +9,6 @@ import cn.geekcity.xiot.spec.image.DeviceImage;
 import cn.geekcity.xiot.spec.notice.Notice;
 import cn.geekcity.xiot.spec.operation.ActionOperation;
 import cn.geekcity.xiot.spec.operation.PropertyOperation;
-import cn.geekcity.xiot.spec.ownership.DeviceOwner;
 import cn.geekcity.xiot.spec.status.AbstractStatus;
 import cn.geekcity.xiot.spec.status.Status;
 import cn.geekcity.xiot.xcp.stanza.Stanza;
@@ -38,6 +37,7 @@ import jakarta.inject.Inject;
 import jakarta.websocket.Session;
 import org.jboss.logging.Logger;
 
+import io.smallrye.mutiny.Uni;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -48,7 +48,7 @@ public class XcpDeviceEndpoint {
     XcpDeviceEndpointHandler handler;
 
     @Inject
-    XcpDeviceFactory factory;
+    ProductService factory;
 
     @Inject
     ConsoleService console;
@@ -219,23 +219,26 @@ public class XcpDeviceEndpoint {
     }
 
     private void onChildrenActive(List<Device> children) {
-        // 先过滤掉子设备ID不合法的情况
-        Set<String> found = console.probeMany(children.stream().map(Device::did).toList());
-        List<Device> childrenValidated = children.stream().filter(x -> found.contains(x.did())).toList();
+        List<String> dids = children.stream().map(Device::did).toList();
 
-        List<DeviceImage> list = factory.newInstances(childrenValidated);
-
-        if (list.isEmpty()) {
-            return;
-        }
-
-        this.root.add(list);
-
-        this.handler.onChildrenActive(this, list);
-
-        for (DeviceImage image : list) {
-            getProperties(image);
-        }
+        console.probeMany(dids)
+                .chain(found -> {
+                    List<Device> validated = children.stream()
+                            .filter(x -> found.contains(x.did()))
+                            .toList();
+                    return factory.newInstances(validated);
+                })
+                .chain(list -> {
+                    if (list.isEmpty()) return Uni.createFrom().voidItem();
+                    this.root.add(list);
+                    return handler.onChildrenActive(this, list)
+                            .invoke(v -> {
+                                for (DeviceImage image : list) {
+                                    getProperties(image);
+                                }
+                            });
+                })
+                .subscribe().with(v -> {});
     }
 
     /**
@@ -467,12 +470,17 @@ public class XcpDeviceEndpoint {
     private void onGetAccessKey(IQQuery query) {
         GetAccessKey.Query q = (GetAccessKey.Query)query;
 
-        try {
-            String value = handler.getAccessKey(root.did());
-            this.write(q.result(value));
-        } catch (IotError e) {
-            this.write(q.error(e.status(), e.description()));
-        }
+        handler.getAccessKey(root.did())
+                .subscribe().with(
+                        value -> this.write(q.result(value)),
+                        e -> {
+                            if (e instanceof IotError ie) {
+                                this.write(q.error(ie.status(), ie.description()));
+                            } else {
+                                this.write(q.error(Status.INTERNAL_ERROR, e.getMessage()));
+                            }
+                        }
+                );
     }
 
     private void onSetAccessKey(IQQuery query) {
@@ -485,33 +493,45 @@ public class XcpDeviceEndpoint {
 
         this.write(q.result());
 
-        handler.setAccessKey(root.did(), q.key());
-        handler.onAccessKeyChanged(this, root.did(), q.key(), q.id());
+        handler.setAccessKey(root.did(), q.key())
+                .invoke(v -> handler.onAccessKeyChanged(this, root.did(), q.key(), q.id()))
+                .subscribe().with(v -> {}, e -> logger.errorv(e, "setAccessKey failed"));
     }
 
     private void onGetOwners(IQQuery query) {
         GetOwners.Query q = (GetOwners.Query)query;
 
-        List<DeviceOwner> owners = handler.getOwners(this.root.did());
-        this.write(q.result(owners));
+        handler.getOwners(this.root.did())
+                .subscribe().with(
+                        owners -> this.write(q.result(owners)),
+                        e -> this.write(q.error(Status.INTERNAL_ERROR, e.getMessage()))
+                );
     }
 
     private void onAddOwner(IQQuery query) {
         AddOwner.Query q = (AddOwner.Query)query;
 
-        try {
-            handler.addOwner(this.root.did(), q.owner());
-            this.write(q.result());
-        } catch (IotError e) {
-            this.write(q.error(e.status(), e.description()));
-        }
+        handler.addOwner(this.root.did(), q.owner())
+                .subscribe().with(
+                        v -> this.write(q.result()),
+                        e -> {
+                            if (e instanceof IotError ie) {
+                                this.write(q.error(ie.status(), ie.description()));
+                            } else {
+                                this.write(q.error(Status.INTERNAL_ERROR, e.getMessage()));
+                            }
+                        }
+                );
     }
 
     private void onRemoveOwner(IQQuery query) {
         RemoveOwner.Query q = (RemoveOwner.Query)query;
 
-        handler.removeOwner(this.root.did(), q.owner());
-        this.write(q.result());
+        handler.removeOwner(this.root.did(), q.owner())
+                .subscribe().with(
+                        v -> this.write(q.result()),
+                        e -> this.write(q.error(Status.INTERNAL_ERROR, e.getMessage()))
+                );
     }
 
     private void onPropertiesChanged(IQQuery query) {
@@ -521,9 +541,9 @@ public class XcpDeviceEndpoint {
 
         root.onPropertiesChanged(q.properties());
 
-        List<PropertyOperation> list = q.properties().stream().filter(AbstractStatus::isNotError).collect(Collectors.toList());
+        List<PropertyOperation> list = q.properties().stream().filter(AbstractStatus::isNotError).toList();
         if (!list.isEmpty()) {
-            handler.onPropertiesChanged(this, list, q.id());
+            handler.onPropertiesChanged(this, list, q.id()).subscribe().with(v -> {});
         }
 
         this.write(q.result(q.properties()));
@@ -537,7 +557,7 @@ public class XcpDeviceEndpoint {
         root.tryEventOccurred(q.event());
 
         if (q.event().isNotError()) {
-            handler.onEventOccurred(this, q.event(), q.id());
+            handler.onEventOccurred(this, q.event(), q.id()).subscribe().with(v -> {});
             this.write(q.result());
         } else {
             this.write(q.error(q.event().status(), q.event().description()));
@@ -547,28 +567,25 @@ public class XcpDeviceEndpoint {
     private void onBye(IQQuery query) {
         logger.info("onBye: " + query.id());
 
-        handler.onInactive(this);
+        handler.onInactive(this).subscribe().with(v -> {});
     }
 
     private void onChildrenAdded(IQQuery query) {
         ChildrenAdded.Query q = (ChildrenAdded.Query) query;
         send(q.result());
 
-        // todo: 先过滤掉子设备不合法的情况
-
-        List<DeviceImage> list = factory.newInstances(q.children());
-
-        if (list.isEmpty()) {
-            return;
-        }
-
-        this.root.add(list);
-
-        this.handler.onChildrenAdded(this, list);
-
-        for (DeviceImage image : list) {
-            getProperties(image);
-        }
+        factory.newInstances(q.children())
+                .chain(list -> {
+                    if (list.isEmpty()) return Uni.createFrom().voidItem();
+                    this.root.add(list);
+                    return handler.onChildrenAdded(this, list)
+                            .invoke(v -> {
+                                for (DeviceImage image : list) {
+                                    getProperties(image);
+                                }
+                            });
+                })
+                .subscribe().with(v -> {});
     }
 
     private void onChildrenRemoved(IQQuery query) {
@@ -586,7 +603,7 @@ public class XcpDeviceEndpoint {
             }
         }
 
-        handler.onChildrenRemoved(this, list);
+        handler.onChildrenRemoved(this, list).subscribe().with(v -> {});
     }
 
     private void onSummaryChanged(IQQuery query) {
@@ -595,7 +612,7 @@ public class XcpDeviceEndpoint {
         DeviceImage node = root.getNode(q.did());
         node.summary(q.summary());
 
-        handler.onSummaryChanged(this, q.did(), q.summary(), q.id());
+        handler.onSummaryChanged(this, q.did(), q.summary(), q.id()).subscribe().with(v -> {});
     }
 
     private void onPing(IQQuery query) {

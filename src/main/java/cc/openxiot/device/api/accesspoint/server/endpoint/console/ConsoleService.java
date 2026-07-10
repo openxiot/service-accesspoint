@@ -1,5 +1,6 @@
 package cc.openxiot.device.api.accesspoint.server.endpoint.console;
 
+import io.smallrye.mutiny.Uni;
 import io.vertx.core.json.JsonObject;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -8,7 +9,6 @@ import org.jboss.logging.Logger;
 
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 @ApplicationScoped
@@ -29,23 +29,22 @@ public class ConsoleService {
         client.applyMany(orgId, keys, false);
     }
 
-    public boolean probeOne(String did) {
-        String response = client.probeOne(did);
-        return Boolean.parseBoolean(response);
+    public Uni<Boolean> probeOne(String did) {
+        return client.probeOne(did)
+                .map(Boolean::parseBoolean);
     }
 
-    public Set<String> probeMany(List<String> did) {
-        Set<String> set = new HashSet<>();
-
-        String response = client.probeMany(did);
-        JsonObject o = new JsonObject(response);
-        for (String id : did) {
-            boolean value = o.getBoolean("id", false);
-            if (value) {
-                set.add(id);
-            }
-        }
-
-        return set;
+    public Uni<Set<String>> probeMany(List<String> dids) {
+        return client.probeMany(dids)
+                .map(response -> {
+                    Set<String> set = new HashSet<>();
+                    JsonObject o = new JsonObject(response);
+                    for (String id : dids) {
+                        if (o.getBoolean(id, false)) {
+                            set.add(id);
+                        }
+                    }
+                    return set;
+                });
     }
 }

@@ -1,5 +1,6 @@
 package cc.openxiot.device.api.accesspoint.server.endpoint.detector;
 
+import io.smallrye.mutiny.Uni;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
@@ -11,5 +12,5 @@ import jakarta.ws.rs.core.MediaType;
 public interface DetectorClient {
 
     @GET
-    String probe(@QueryParam("did") String did);
+    Uni<String> probe(@QueryParam("did") String did);
 }

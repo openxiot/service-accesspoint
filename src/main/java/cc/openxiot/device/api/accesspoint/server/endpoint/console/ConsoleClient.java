@@ -1,5 +1,6 @@
 package cc.openxiot.device.api.accesspoint.server.endpoint.console;
 
+import io.smallrye.mutiny.Uni;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
@@ -29,9 +30,9 @@ public interface ConsoleClient {
     @GET
     @Path("/probe/one")
     @Produces(MediaType.TEXT_PLAIN)
-    String probeOne(@QueryParam("did") String did);
+    Uni<String> probeOne(@QueryParam("did") String did);
 
     @GET
     @Path("/probe/many")
-    String probeMany(@QueryParam("did") List<String> dids);
+    Uni<String> probeMany(@QueryParam("did") List<String> dids);
 }
