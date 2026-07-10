@@ -33,7 +33,6 @@ import cn.geekcity.xiot.xcp.stanza.message.Message;
 import io.vertx.core.*;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
-import jakarta.inject.Inject;
 import jakarta.websocket.Session;
 import org.jboss.logging.Logger;
 
@@ -44,14 +43,9 @@ import java.util.stream.Collectors;
 
 public class XcpDeviceEndpoint {
 
-    @Inject
-    XcpDeviceEndpointHandler handler;
-
-    @Inject
-    ProductService factory;
-
-    @Inject
-    ConsoleService console;
+    private XcpDeviceEndpointHandler handler;
+    private ProductService product;
+    private ConsoleService console;
 
     private static final Logger logger = Logger.getLogger(XcpDeviceEndpoint.class);
     private static final int DEFAULT_QUERY_TIMEOUT_MS = 3_000;
@@ -93,6 +87,18 @@ public class XcpDeviceEndpoint {
         this.addQueryHandler(SummaryChanged.METHOD, this::onSummaryChanged);
 
         // TODO: 这里加一个逻辑，申请子设备ID，允许网关给子设备申请ID
+    }
+
+    public void handler(XcpDeviceEndpointHandler handler) {
+        this.handler = handler;
+    }
+
+    public void product(ProductService product) {
+        this.product = product;
+    }
+
+    public void console(ConsoleService console) {
+        this.console = console;
     }
 
     public void initialize() {
@@ -226,7 +232,7 @@ public class XcpDeviceEndpoint {
                     List<Device> validated = children.stream()
                             .filter(x -> found.contains(x.did()))
                             .toList();
-                    return factory.newInstances(validated);
+                    return product.newInstances(validated);
                 })
                 .chain(list -> {
                     if (list.isEmpty()) return Uni.createFrom().voidItem();
@@ -574,7 +580,7 @@ public class XcpDeviceEndpoint {
         ChildrenAdded.Query q = (ChildrenAdded.Query) query;
         send(q.result());
 
-        factory.newInstances(q.children())
+        product.newInstances(q.children())
                 .chain(list -> {
                     if (list.isEmpty()) return Uni.createFrom().voidItem();
                     this.root.add(list);

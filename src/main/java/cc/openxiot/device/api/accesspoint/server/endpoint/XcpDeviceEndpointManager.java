@@ -1,5 +1,7 @@
 package cc.openxiot.device.api.accesspoint.server.endpoint;
 
+import cc.openxiot.device.api.accesspoint.server.endpoint.console.ConsoleService;
+import cc.openxiot.device.api.accesspoint.server.endpoint.factory.ProductService;
 import cn.geekcity.xiot.spec.device.Device;
 import cn.geekcity.xiot.spec.error.IotError;
 import cn.geekcity.xiot.spec.image.DeviceImage;
@@ -36,6 +38,12 @@ public class XcpDeviceEndpointManager {
     XcpDeviceEndpointHandler handler;
 
     @Inject
+    ProductService product;
+
+    @Inject
+    ConsoleService console;
+
+    @Inject
     DeviceRegistryRepository registry;
 
     @Inject
@@ -51,6 +59,10 @@ public class XcpDeviceEndpointManager {
                         logger.infov("device already online: {0}", endpoint.root().did());
                         return Uni.createFrom().item(false);
                     }
+
+                    endpoint.handler(handler);
+                    endpoint.product(product);
+                    endpoint.console(console);
 
                     endpoints.put(endpoint.id(), endpoint);
                     save(endpoint.root(), endpoint.id());
