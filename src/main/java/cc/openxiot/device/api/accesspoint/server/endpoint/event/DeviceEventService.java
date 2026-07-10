@@ -20,12 +20,12 @@ public class DeviceEventService {
     DeviceNoticeCodec codec = new DeviceNoticeCodec();
 
     public void publish(DeviceNotice notice) {
-        try {
-            String body = codec.encode(notice).toString();
-            logger.infov("publish: {0}", body);
-            publisher.publish(notice.subType(), body);
-        } catch (Exception e) {
-            logger.error("publish error: ", e);
-        }
+        String body = codec.encode(notice).toString();
+        logger.infov("publish: {0}", body);
+        publisher.publish(notice.subType(), body)
+                .subscribe().with(
+                        result -> logger.infov("publish success: {0}", result),
+                        e -> logger.error("publish error: ", e)
+                );
     }
 }

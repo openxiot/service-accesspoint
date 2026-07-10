@@ -1,5 +1,6 @@
 package cc.openxiot.device.api.accesspoint.server.endpoint.event;
 
+import io.smallrye.mutiny.Uni;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
@@ -11,5 +12,5 @@ public interface DeviceEventPublisher {
     @POST
     @Path("/{type}")
     @Produces(MediaType.APPLICATION_JSON)
-    String publish(@PathParam("type") String type, String body);
+    Uni<String> publish(@PathParam("type") String type, String body);
 }

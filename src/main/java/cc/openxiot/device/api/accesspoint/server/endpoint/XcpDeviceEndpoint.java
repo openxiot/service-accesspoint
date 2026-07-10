@@ -1,5 +1,6 @@
 package cc.openxiot.device.api.accesspoint.server.endpoint;
 
+import cc.openxiot.device.api.accesspoint.server.endpoint.console.ConsoleService;
 import cc.openxiot.device.api.accesspoint.server.endpoint.factory.XcpDeviceFactory;
 import cn.geekcity.xiot.spec.constant.Constant;
 import cn.geekcity.xiot.spec.device.Device;
@@ -48,6 +49,9 @@ public class XcpDeviceEndpoint {
 
     @Inject
     XcpDeviceFactory factory;
+
+    @Inject
+    ConsoleService console;
 
     private static final Logger logger = Logger.getLogger(XcpDeviceEndpoint.class);
     private static final int DEFAULT_QUERY_TIMEOUT_MS = 3_000;
@@ -215,9 +219,11 @@ public class XcpDeviceEndpoint {
     }
 
     private void onChildrenActive(List<Device> children) {
-        // todo: 先过滤掉子设备不合法的情况
+        // 先过滤掉子设备ID不合法的情况
+        Set<String> found = console.probeMany(children.stream().map(Device::did).toList());
+        List<Device> childrenValidated = children.stream().filter(x -> found.contains(x.did())).toList();
 
-        List<DeviceImage> list = factory.newInstances(children);
+        List<DeviceImage> list = factory.newInstances(childrenValidated);
 
         if (list.isEmpty()) {
             return;

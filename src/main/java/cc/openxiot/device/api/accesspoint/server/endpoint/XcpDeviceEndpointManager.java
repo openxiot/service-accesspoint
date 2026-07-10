@@ -11,7 +11,6 @@ import cn.geekcity.xiot.spec.status.Status;
 import cn.geekcity.xiot.xcp.stanza.iq.IQ;
 import cn.geekcity.xiot.xcp.stanza.iq.device.control.*;
 import cn.geekcity.xiot.xcp.stanza.message.Message;
-import cc.openxiot.common.util.FutureMerger;
 import cc.openxiot.device.api.accesspoint.server.endpoint.detector.DetectorService;
 import cc.openxiot.device.db.registry.DeviceRegistry;
 import cc.openxiot.device.db.registry.DeviceRegistryRepository;

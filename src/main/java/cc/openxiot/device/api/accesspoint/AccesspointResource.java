@@ -42,9 +42,10 @@ public class AccesspointResource {
     XcpDeviceEndpointManager manager;
 
     @GET
+    @Path("/hello")
     public Response hello() {
         logger.info("Private hello");
-        return OxResponse.ok("Hello from private");
+        return OxResponse.ok("Hello from AccesspointResource");
     }
 
     @GET
@@ -58,16 +59,16 @@ public class AccesspointResource {
     }
 
     @GET
-    @Path("/devices")
-    public Response getDevices() {
-        return OxResponse.ok(DeviceCodec.encode(manager.getDevices()));
-    }
-
-    @GET
     @Path("/probe")
     @Produces(MediaType.TEXT_PLAIN)
     public Response probe(@QueryParam("did") String did) {
         return Response.ok(String.valueOf(manager.probe(did))).build();
+    }
+
+    @GET
+    @Path("/devices")
+    public Response getDevices() {
+        return OxResponse.ok(DeviceCodec.encode(manager.getDevices()));
     }
 
     @GET
