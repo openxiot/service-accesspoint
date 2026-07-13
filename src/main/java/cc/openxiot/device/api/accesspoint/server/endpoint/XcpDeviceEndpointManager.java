@@ -54,6 +54,7 @@ public class XcpDeviceEndpointManager {
 
     public Uni<Boolean> add(XcpDeviceEndpoint endpoint) {
         return isOnline(endpoint.root().did())
+                .onFailure().recoverWithItem(false)
                 .chain(online -> {
                     if (online) {
                         logger.infov("device already online: {0}", endpoint.root().did());
@@ -69,6 +70,7 @@ public class XcpDeviceEndpointManager {
                     endpoint.root().summary().lastOnline(new Date());
 
                     return handler.onActive(endpoint)
+                            .onFailure().recoverWithNull()
                             .chain(v -> {
                                 if (!endpoint.session().isOpen()) {
                                     XcpDeviceEndpoint removed = endpoints.remove(endpoint.id());
@@ -81,7 +83,12 @@ public class XcpDeviceEndpointManager {
                                 endpoint.initialize();
                                 return Uni.createFrom().item(true);
                             });
-                });
+                })
+                // Safety net: if handler.onActive() throws synchronously (e.g. NPE from
+                // Urn.toString() in DeviceRegistryMapper), or any other unexpected error
+                // escapes the inner chain, recover with true — the endpoint was already
+                // added to the endpoints map by this point.
+                .onFailure().recoverWithItem(true);
     }
 
     private void save(DeviceImage device, String endpointId) {

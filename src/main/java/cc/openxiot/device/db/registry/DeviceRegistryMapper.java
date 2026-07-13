@@ -22,7 +22,7 @@ public class DeviceRegistryMapper {
         entity.did = did;
         entity.accessPoint = accessPoint;
         entity.type = summary.type() != null ? summary.type().toString() : null;
-        entity.online = Boolean.TRUE.equals(summary.online());
+        entity.online = summary.online();
         entity.protocol = summary.protocol();
         entity.parentId = summary.parentId();
         entity.rootId = summary.rootId();

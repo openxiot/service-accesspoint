@@ -11,10 +11,10 @@ class AccesspointResourceTest {
     @Test
     void testPrivateHello() {
         given()
-          .when().get("/v1/private")
+          .when().get("/v1/private/hello")
           .then()
              .statusCode(200)
              .body("success", is(true))
-             .body("data", is("Hello from private"));
+             .body("data", is("Hello from AccesspointResource"));
     }
 }

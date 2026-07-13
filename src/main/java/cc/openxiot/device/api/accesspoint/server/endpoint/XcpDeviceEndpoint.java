@@ -22,6 +22,8 @@ import cn.geekcity.xiot.xcp.stanza.iq.basic.Ping;
 import cn.geekcity.xiot.xcp.stanza.iq.device.control.GetProperties;
 import cn.geekcity.xiot.xcp.stanza.iq.device.control.InvokeActions;
 import cn.geekcity.xiot.xcp.stanza.iq.device.control.SetProperties;
+import cn.geekcity.xiot.xcp.stanza.iq.device.did.ApplyDeviceId;
+import cn.geekcity.xiot.xcp.stanza.iq.device.did.ApplyDeviceIds;
 import cn.geekcity.xiot.xcp.stanza.iq.device.key.GetAccessKey;
 import cn.geekcity.xiot.xcp.stanza.iq.device.key.SetAccessKey;
 import cn.geekcity.xiot.xcp.stanza.iq.device.manager.GetChildren;
@@ -32,17 +34,21 @@ import cn.geekcity.xiot.xcp.stanza.iq.owner.manager.RemoveOwner;
 import cn.geekcity.xiot.xcp.stanza.message.Message;
 import io.vertx.core.*;
 import io.vertx.core.json.DecodeException;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import jakarta.websocket.Session;
 import org.jboss.logging.Logger;
 
 import io.smallrye.mutiny.Uni;
+import org.slf4j.LoggerFactory;
+
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class XcpDeviceEndpoint {
 
+    private static final org.slf4j.Logger log = LoggerFactory.getLogger(XcpDeviceEndpoint.class);
     private XcpDeviceEndpointHandler handler;
     private ProductService product;
     private ConsoleService console;
@@ -61,7 +67,6 @@ public class XcpDeviceEndpoint {
 
     private final Map<String, Handler<IQQuery>> queryHandlers = new HashMap<>();
     private final Map<String, XcpResultHandler> resultHandlers = new HashMap<>();
-    private final Map<String, Handler<Message<? extends Notice>>> messageHandlers = new HashMap<>();
 
     public XcpDeviceEndpoint(Vertx vertx, String ip, Session session, DeviceImage image, StanzaCodec codec) {
         this.vertx = vertx;
@@ -85,8 +90,8 @@ public class XcpDeviceEndpoint {
         this.addQueryHandler(ChildrenAdded.METHOD, this::onChildrenAdded);
         this.addQueryHandler(ChildrenRemoved.METHOD, this::onChildrenRemoved);
         this.addQueryHandler(SummaryChanged.METHOD, this::onSummaryChanged);
-
-        // TODO: 这里加一个逻辑，申请子设备ID，允许网关给子设备申请ID
+        this.addQueryHandler(ApplyDeviceId.METHOD, this::onApplyDeviceId);
+        this.addQueryHandler(ApplyDeviceIds.METHOD, this::onApplyDeviceIds);
     }
 
     public void handler(XcpDeviceEndpointHandler handler) {
@@ -124,10 +129,6 @@ public class XcpDeviceEndpoint {
 
     public void addQueryHandler(String method, Handler<IQQuery> handler) {
         queryHandlers.put(method, handler);
-    }
-
-    public void addMessageHandler(String topic, Handler<Message<? extends Notice>> handler) {
-        messageHandlers.put(topic, handler);
     }
 
     public Future<IQ> send(IQQuery query) {
@@ -244,7 +245,8 @@ public class XcpDeviceEndpoint {
                                 }
                             });
                 })
-                .subscribe().with(v -> {});
+                .subscribe().with(v -> {
+                });
     }
 
     /**
@@ -405,7 +407,6 @@ public class XcpDeviceEndpoint {
                 break;
 
             case MESSAGE:
-                handleMessage((Message<? extends Notice>) stanza);
                 break;
 
             default:
@@ -461,20 +462,8 @@ public class XcpDeviceEndpoint {
         }
     }
 
-    private void handleMessage(Message<? extends Notice> message) {
-        // 重置设备消息的时间戳
-        message.payload().timestamp(System.currentTimeMillis());
-
-        Handler<Message<? extends Notice>> handler = messageHandlers.get(message.topic());
-        if (handler != null) {
-            handler.handle(message);
-        } else {
-            logger.info("Message Handler not found: " + message.topic());
-        }
-    }
-
     private void onGetAccessKey(IQQuery query) {
-        GetAccessKey.Query q = (GetAccessKey.Query)query;
+        GetAccessKey.Query q = (GetAccessKey.Query) query;
 
         handler.getAccessKey(root.did())
                 .subscribe().with(
@@ -490,7 +479,7 @@ public class XcpDeviceEndpoint {
     }
 
     private void onSetAccessKey(IQQuery query) {
-        SetAccessKey.Query q = (SetAccessKey.Query)query;
+        SetAccessKey.Query q = (SetAccessKey.Query) query;
 
         if (q.key().length() < Constant.ACCESS_KEY_MIN_LENGTH) {
             this.write(q.error(Status.ACCESS_KEY_INVALID, "access-key too short"));
@@ -501,11 +490,12 @@ public class XcpDeviceEndpoint {
 
         handler.setAccessKey(root.did(), q.key())
                 .invoke(v -> handler.onAccessKeyChanged(this, root.did(), q.key(), q.id()))
-                .subscribe().with(v -> {}, e -> logger.errorv(e, "setAccessKey failed"));
+                .subscribe().with(v -> {
+                }, e -> logger.errorv(e, "setAccessKey failed"));
     }
 
     private void onGetOwners(IQQuery query) {
-        GetOwners.Query q = (GetOwners.Query)query;
+        GetOwners.Query q = (GetOwners.Query) query;
 
         handler.getOwners(this.root.did())
                 .subscribe().with(
@@ -515,7 +505,7 @@ public class XcpDeviceEndpoint {
     }
 
     private void onAddOwner(IQQuery query) {
-        AddOwner.Query q = (AddOwner.Query)query;
+        AddOwner.Query q = (AddOwner.Query) query;
 
         handler.addOwner(this.root.did(), q.owner())
                 .subscribe().with(
@@ -531,7 +521,7 @@ public class XcpDeviceEndpoint {
     }
 
     private void onRemoveOwner(IQQuery query) {
-        RemoveOwner.Query q = (RemoveOwner.Query)query;
+        RemoveOwner.Query q = (RemoveOwner.Query) query;
 
         handler.removeOwner(this.root.did(), q.owner())
                 .subscribe().with(
@@ -549,7 +539,8 @@ public class XcpDeviceEndpoint {
 
         List<PropertyOperation> list = q.properties().stream().filter(AbstractStatus::isNotError).toList();
         if (!list.isEmpty()) {
-            handler.onPropertiesChanged(this, list, q.id()).subscribe().with(v -> {});
+            handler.onPropertiesChanged(this, list, q.id()).subscribe().with(v -> {
+            });
         }
 
         this.write(q.result(q.properties()));
@@ -558,12 +549,13 @@ public class XcpDeviceEndpoint {
     private void onEventOccurred(IQQuery query) {
         logger.info("onEventOccurred: " + query.id());
 
-        EventOccurred.Query q = (EventOccurred.Query)query;
+        EventOccurred.Query q = (EventOccurred.Query) query;
 
         root.tryEventOccurred(q.event());
 
         if (q.event().isNotError()) {
-            handler.onEventOccurred(this, q.event(), q.id()).subscribe().with(v -> {});
+            handler.onEventOccurred(this, q.event(), q.id()).subscribe().with(v -> {
+            });
             this.write(q.result());
         } else {
             this.write(q.error(q.event().status(), q.event().description()));
@@ -573,7 +565,8 @@ public class XcpDeviceEndpoint {
     private void onBye(IQQuery query) {
         logger.info("onBye: " + query.id());
 
-        handler.onInactive(this).subscribe().with(v -> {});
+        handler.onInactive(this).subscribe().with(v -> {
+        });
     }
 
     private void onChildrenAdded(IQQuery query) {
@@ -591,7 +584,8 @@ public class XcpDeviceEndpoint {
                                 }
                             });
                 })
-                .subscribe().with(v -> {});
+                .subscribe().with(v -> {
+                });
     }
 
     private void onChildrenRemoved(IQQuery query) {
@@ -609,16 +603,64 @@ public class XcpDeviceEndpoint {
             }
         }
 
-        handler.onChildrenRemoved(this, list).subscribe().with(v -> {});
+        handler.onChildrenRemoved(this, list).subscribe().with(v -> {
+        });
     }
 
     private void onSummaryChanged(IQQuery query) {
         SummaryChanged.Query q = (SummaryChanged.Query) query;
 
         DeviceImage node = root.getNode(q.did());
-        node.summary(q.summary());
+        if (node != null) {
+            node.summary(q.summary());
+            handler.onSummaryChanged(this, q.did(), q.summary(), q.id())
+                    .subscribe().with(v -> {
+                    });
 
-        handler.onSummaryChanged(this, q.did(), q.summary(), q.id()).subscribe().with(v -> {});
+            send(q.result());
+        } else {
+            send(q.error(Status.DEVICE_ID_INVALID, "did not found"));
+        }
+    }
+
+    private void onApplyDeviceId(IQQuery query) {
+        ApplyDeviceId.Query q = (ApplyDeviceId.Query) query;
+
+        console.applyOne(q.orgId(), q.signature(), q.deviceFingerprint())
+                .subscribe().with(
+                        x -> {
+                            logger.infov("applyOne ok: {0}", x);
+                            String did = x.getString("deviceId", "");
+                            write(q.result(did));
+                        }, error -> {
+                            logger.infov("applyOne error: {0}", error.getMessage());
+                            write(q.error(Status.INTERNAL_ERROR, error.getMessage()));
+                        });
+    }
+
+    private void onApplyDeviceIds(IQQuery query) {
+        ApplyDeviceIds.Query q = (ApplyDeviceIds.Query) query;
+
+        console.applyMany(q.orgId(), q.signature(), q.deviceFingerprints())
+                .subscribe().with(
+                        x -> {
+                            logger.infov("applyMany ok: {0}", x);
+                            Map<String, String> devices = new HashMap<>();
+
+                            JsonArray array = x.getJsonArray("devices", new JsonArray());
+                            for (Object item : array) {
+                                if (item instanceof JsonObject o) {
+                                    String did = o.getString("deviceId", "");
+                                    String deviceFingerprint = o.getString("deviceId", "");
+                                    devices.put(deviceFingerprint, did);
+                                }
+                            }
+
+                            write(q.result(devices));
+                        }, error -> {
+                            logger.infov("applyMany error: {0}", error.getMessage());
+                            write(q.error(Status.INTERNAL_ERROR, error.getMessage()));
+                        });
     }
 
     private void onPing(IQQuery query) {

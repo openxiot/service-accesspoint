@@ -21,12 +21,14 @@ public class ConsoleService {
     @RestClient
     ConsoleClient client;
 
-    public void applyOne(String orgId, String key) {
-        client.applyOne(orgId, key, false);
+    public Uni<JsonObject> applyOne(String orgId, String signature, String fingerprint) {
+        return client.applyOne(orgId, signature, fingerprint, false)
+                .map(JsonObject::new);
     }
 
-    public void applyMany(String orgId, List<String> keys) {
-        client.applyMany(orgId, keys, false);
+    public Uni<JsonObject> applyMany(String orgId, String signature, List<String> fingerprints) {
+        return client.applyMany(orgId, signature, fingerprints, false)
+                .map(JsonObject::new);
     }
 
     public Uni<Boolean> probeOne(String did) {

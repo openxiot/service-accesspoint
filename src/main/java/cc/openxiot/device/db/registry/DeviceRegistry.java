@@ -124,4 +124,8 @@ public class DeviceRegistry {
 
         return changed;
     }
+
+    public boolean invalid(String key) {
+        return !key.equals(accessKey);
+    }
 }

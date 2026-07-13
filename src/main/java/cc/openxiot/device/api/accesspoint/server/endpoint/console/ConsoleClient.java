@@ -14,16 +14,18 @@ public interface ConsoleClient {
 
     @GET
     @Path("/apply/one")
-    String applyOne(
+    Uni<String> applyOne(
             @QueryParam("orgId") String orgId,
-            @QueryParam("key") String key,
+            @QueryParam("signature") String signature,
+            @QueryParam("fingerprint") String fingerprint,
             @QueryParam("issueCert") @DefaultValue("false") boolean  issueCert
     );
 
     @GET
-    String applyMany(
+    Uni<String> applyMany(
             @QueryParam("orgId") String orgId,
-            @QueryParam("key") List<String> keys,
+            @QueryParam("signature") String signature,
+            @QueryParam("fingerprints") List<String> fingerprints,
             @QueryParam("issueCert") @DefaultValue("false") boolean issueCert
     );
 
