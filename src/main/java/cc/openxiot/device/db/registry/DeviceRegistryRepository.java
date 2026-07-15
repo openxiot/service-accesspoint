@@ -8,8 +8,6 @@ import io.quarkus.mongodb.reactive.ReactiveMongoCollection;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
-
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
@@ -23,11 +21,8 @@ public class DeviceRegistryRepository {
     @Inject
     ReactiveMongoClient mongoClient;
 
-    @ConfigProperty(name = "quarkus.mongodb.database", defaultValue = "default")
-    String database;
-
     private ReactiveMongoCollection<DeviceRegistry> getCollection() {
-        return mongoClient.getDatabase(database).getCollection("registry", DeviceRegistry.class);
+        return mongoClient.getDatabase("device").getCollection("registry", DeviceRegistry.class);
     }
 
     public Uni<Void> register(DeviceRegistry device) {

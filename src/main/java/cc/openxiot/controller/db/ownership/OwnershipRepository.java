@@ -7,8 +7,6 @@ import io.quarkus.mongodb.reactive.ReactiveMongoCollection;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
-
 import java.util.Collection;
 import java.util.List;
 
@@ -18,11 +16,8 @@ public class OwnershipRepository {
     @Inject
     ReactiveMongoClient mongoClient;
 
-    @ConfigProperty(name = "quarkus.mongodb.database", defaultValue = "default")
-    String database;
-
     private ReactiveMongoCollection<Ownership> getCollection() {
-        return mongoClient.getDatabase(database).getCollection("ownership", Ownership.class);
+        return mongoClient.getDatabase("device").getCollection("ownership", Ownership.class);
     }
 
     public Uni<Void> add(Ownership ownership) {
