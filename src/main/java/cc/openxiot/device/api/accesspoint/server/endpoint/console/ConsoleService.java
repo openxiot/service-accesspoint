@@ -21,9 +21,18 @@ public class ConsoleService {
     @RestClient
     ConsoleClient client;
 
+    public Uni<JsonObject> applyOne(String orgId, String signature, String fingerprint, boolean cert) {
+        return client.applyOne(orgId, signature, fingerprint, cert)
+                .map(JsonObject::new);
+    }
+
     public Uni<JsonObject> applyOne(String orgId, String signature, String fingerprint) {
         return client.applyOne(orgId, signature, fingerprint, false)
                 .map(JsonObject::new);
+    }
+
+    public Uni<JsonObject> applyMany(String orgId, String signature, List<String> fingerprints, boolean cert) {
+        return applyMany(orgId, signature, fingerprints, cert);
     }
 
     public Uni<JsonObject> applyMany(String orgId, String signature, List<String> fingerprints) {
