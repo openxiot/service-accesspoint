@@ -34,13 +34,14 @@ public class ApplyResource {
 
     @GET
     @Path("/one")
-    public Uni<Response> applyDeviceCert(
+    public Uni<Response> applyOne(
             @QueryParam("orgId") String orgId,
             @QueryParam("signature") String signature,
             @QueryParam("fingerprint") String fingerprint,
-            @QueryParam("issueCert") @DefaultValue("false") boolean  issueCert
+            @QueryParam("cert") @DefaultValue("false") boolean cert
     ) {
-        return service.applyOne(orgId, signature, fingerprint, issueCert)
+        logger.infov("applyOne, {0}/{1}/{2}/{3}", orgId, signature, fingerprint, cert);
+        return service.applyOne(orgId, signature, fingerprint, cert)
                 .map(OxResponse::ok)
                 .onFailure().recoverWithItem(e -> OxResponse.error(e.getMessage()));
     }
