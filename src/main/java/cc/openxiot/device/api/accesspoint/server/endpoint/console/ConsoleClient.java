@@ -17,7 +17,7 @@ public interface ConsoleClient {
     Uni<String> applyOne(
             @QueryParam("orgId") String orgId,
             @QueryParam("signature") String signature,
-            @QueryParam("fingerprint") String fingerprint,
+            @QueryParam("deviceFingerprint") String fingerprint,
             @QueryParam("issueCert") @DefaultValue("false") boolean  issueCert
     );
 
@@ -25,7 +25,7 @@ public interface ConsoleClient {
     Uni<String> applyMany(
             @QueryParam("orgId") String orgId,
             @QueryParam("signature") String signature,
-            @QueryParam("fingerprints") List<String> fingerprints,
+            @QueryParam("deviceFingerprints") List<String> fingerprints,
             @QueryParam("issueCert") @DefaultValue("false") boolean issueCert
     );
 

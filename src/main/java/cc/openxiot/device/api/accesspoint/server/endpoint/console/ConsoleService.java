@@ -32,7 +32,8 @@ public class ConsoleService {
     }
 
     public Uni<JsonObject> applyMany(String orgId, String signature, List<String> fingerprints, boolean cert) {
-        return applyMany(orgId, signature, fingerprints, cert);
+        return client.applyMany(orgId, signature, fingerprints, cert)
+                .map(JsonObject::new);
     }
 
     public Uni<JsonObject> applyMany(String orgId, String signature, List<String> fingerprints) {
