@@ -41,13 +41,13 @@ public class ConsoleService {
                 .map(JsonObject::new);
     }
 
-    public Uni<Boolean> probeOne(String did) {
-        return client.probeOne(did)
+    public Uni<Boolean> activeOne(String did) {
+        return client.activeOne(did)
                 .map(Boolean::parseBoolean);
     }
 
-    public Uni<Set<String>> probeMany(List<String> dids) {
-        return client.probeMany(dids)
+    public Uni<Set<String>> activeMany(List<String> dids) {
+        return client.activeMany(dids)
                 .map(response -> {
                     Set<String> set = new HashSet<>();
                     JsonObject o = new JsonObject(response);

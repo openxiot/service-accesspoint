@@ -30,11 +30,11 @@ public interface ConsoleClient {
     );
 
     @GET
-    @Path("/probe/one")
+    @Path("/active/one")
     @Produces(MediaType.TEXT_PLAIN)
-    Uni<String> probeOne(@QueryParam("did") String did);
+    Uni<String> activeOne(@QueryParam("did") String did);
 
     @GET
-    @Path("/probe/many")
-    Uni<String> probeMany(@QueryParam("did") List<String> dids);
+    @Path("/active/many")
+    Uni<String> activeMany(@QueryParam("did") List<String> dids);
 }

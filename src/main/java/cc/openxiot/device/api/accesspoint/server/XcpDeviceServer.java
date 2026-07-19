@@ -1,6 +1,7 @@
 package cc.openxiot.device.api.accesspoint.server;
 
 import cc.openxiot.device.api.accesspoint.server.configurator.XcpCertConfigurator;
+import cc.openxiot.device.api.accesspoint.server.endpoint.console.ConsoleService;
 import cc.openxiot.device.api.accesspoint.server.limiter.RateLimiter;
 import cc.openxiot.device.api.accesspoint.server.endpoint.XcpDeviceEndpoint;
 import cc.openxiot.device.api.accesspoint.server.endpoint.XcpDeviceEndpointManager;
@@ -31,6 +32,9 @@ public class XcpDeviceServer {
 
     @Inject
     ProductService factory;
+
+    @Inject
+    ConsoleService console;
 
     @Inject
     XcpDeviceEndpointManager manager;
@@ -64,16 +68,23 @@ public class XcpDeviceServer {
             }
         }
 
-        logger.infov("XCP device connected: did={0}, sessionId={1}", did, session.getId());
-
-        factory.newInstance(did, new Summary(type, true, "wss", null, did))
-                .chain(image -> {
-                    if (image == null) {
-                        logger.warnv("Reject device, type not found from ProductCenter: did={0}, type={1}", did, type);
-                        closeSession(session, "device type not found");
-                        return Uni.createFrom().item(true); // handled, no re-close needed
+        console.activeOne(did)
+                .chain(activated -> {
+                    if (!activated) {
+                        logger.warnv("Reject device, activation failed: did={0}", did);
+                        closeSession(session, "device activation rejected");
+                        return Uni.createFrom().item(true); // handled
                     }
-                    return manager.add(new XcpDeviceEndpoint(vertx, replica.getIp(), session, image, codec));
+                    logger.infov("XCP device connected: did={0}, sessionId={1}", did, session.getId());
+                    return factory.newInstance(did, new Summary(type, true, "wss", null, did))
+                            .chain(image -> {
+                                if (image == null) {
+                                    logger.warnv("Reject device, type not found from ProductCenter: did={0}, type={1}", did, type);
+                                    closeSession(session, "device type not found");
+                                    return Uni.createFrom().item(true); // handled, no re-close needed
+                                }
+                                return manager.add(new XcpDeviceEndpoint(vertx, replica.getIp(), session, image, codec));
+                            });
                 })
                 .subscribe().with(
                         added -> {

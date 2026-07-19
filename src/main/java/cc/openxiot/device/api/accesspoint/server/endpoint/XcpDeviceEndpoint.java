@@ -228,7 +228,7 @@ public class XcpDeviceEndpoint {
     private void onChildrenActive(List<Device> children) {
         List<String> dids = children.stream().map(Device::did).toList();
 
-        console.probeMany(dids)
+        console.activeMany(dids)
                 .chain(found -> {
                     List<Device> validated = children.stream()
                             .filter(x -> found.contains(x.did()))
