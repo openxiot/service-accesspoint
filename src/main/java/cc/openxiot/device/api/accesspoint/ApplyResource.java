@@ -42,6 +42,7 @@ public class ApplyResource {
     ) {
         logger.infov("applyOne, {0}/{1}/{2}/{3}", orgId, signature, fingerprint, cert);
         return service.applyOne(orgId, signature, fingerprint, cert)
+                .map(x -> Response.ok().entity(x).type(MediaType.APPLICATION_JSON).build())
                 .map(OxResponse::ok)
                 .onFailure().recoverWithItem(e -> OxResponse.error(e.getMessage()));
     }
@@ -57,7 +58,7 @@ public class ApplyResource {
     ) {
         logger.infov("apply deviceIds for org: {0}, deviceFingerprints: {1}, issueCert: {2}", orgId, fingerprints, issueCert);
         return service.applyMany(orgId, signature, fingerprints, issueCert)
-                .map(OxResponse::ok)
+                .map(x -> Response.ok().entity(x).type(MediaType.APPLICATION_JSON).build())
                 .onFailure().recoverWithItem(e -> OxResponse.error(e.getMessage()));
     }
 }
