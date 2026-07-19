@@ -43,7 +43,6 @@ public class ApplyResource {
         logger.infov("applyOne, {0}/{1}/{2}/{3}", orgId, signature, fingerprint, cert);
         return service.applyOne(orgId, signature, fingerprint, cert)
                 .map(x -> Response.ok().entity(x).type(MediaType.APPLICATION_JSON).build())
-                .map(OxResponse::ok)
                 .onFailure().recoverWithItem(e -> OxResponse.error(e.getMessage()));
     }
 
