@@ -33,14 +33,17 @@ public class ReplicaService {
                 return podIp;
             }
 
-            // 遍历网络接口，找到第一个非回环的 IPv4 地址
+            // 遍历网络接口，找到第一个非回环、非链路本地的 IPv4 地址
+            // 链路本地地址 (169.254.x.x) 在 Azure 容器应用中常被用于内部路由，不是真实的 VNet IP
             var interfaces = NetworkInterface.networkInterfaces()
                     .filter(Objects::nonNull)
                     .flatMap(NetworkInterface::inetAddresses)
                     .toList();
 
             for (var addr : interfaces) {
-                if (addr instanceof Inet4Address && !addr.isLoopbackAddress()) {
+                if (addr instanceof Inet4Address
+                        && !addr.isLoopbackAddress()
+                        && !addr.isLinkLocalAddress()) {
                     return addr.getHostAddress();
                 }
             }
