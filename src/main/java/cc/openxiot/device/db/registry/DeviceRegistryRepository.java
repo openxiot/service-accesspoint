@@ -143,7 +143,7 @@ public class DeviceRegistryRepository {
             device.accessKey = existed.accessKey;
             device.create = existed.create;
         } else {
-            device.accessKey = UUID.randomUUID().toString();
+            device.accessKey = UUID.randomUUID().toString().toUpperCase().replace("-", "");
             device.create = new Date();
         }
         device.online = true;
